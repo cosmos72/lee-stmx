@@ -1,4 +1,3 @@
-;;
 ;; BSD License
 ;;
 ;; Copyright (c) 2007, The University of Manchester (UK)
@@ -31,29 +30,34 @@
 ;; THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 ;; (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 ;;  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-;;
-
-(in-package :cl-user)
-
-(asdf:defsystem #:lee-stmx
-  :name "lee-stmx"
-  :version "0.7.0"
-  :license "BSD"
-  :author "Massimiliano Ghilardi, The University of Manchester (UK)"
-  :description "Lee-TM benchmark for STMX transactional memory library"
-
-  :depends-on (:log4cl
-               :bordeaux-threads
-               :stmx)
-
-  :components ((:static-file "lee-stmx.asd")
-
-	       (:module :src
-	        :components ((:file "package")
-                             (:file "lee"     :depends-on ("package"))
-                             (:file "barrier" :depends-on ("package"))
-                             (:file "main"    :depends-on ("lee" "barrier"))))))
-                
-                             
 
 
+;;;; * lee-stmx
+
+(in-package :lee-stmx)
+
+(declaim (inline %make-thread-barrier))
+
+(defstruct (thread-barrier (:constructor %make-thread-barrier))
+  (lock        (bt:make-lock "thread-barrier") :read-only t)
+  (condition   (bt:make-condition-variable :name "thread-barrier-condition")  :read-only t)
+  (count       1  :type fixnum))
+
+
+(defun thread-barrier (thread-count)
+  "Create and return a THREAD-BARRIER that THREAD-COUNT threads can use to wait on."
+  (declare (type fixnum thread-count))
+  (%make-thread-barrier :count thread-count))
+
+
+(defun join-thread-barrier (thread-barrier)
+  "Block until THREAD-COUNT threads invoke this function on the same THREAD-BARRIER."
+  (declare (type thread-barrier thread-barrier))
+  (let ((lock (thread-barrier-lock thread-barrier))
+        (cond (thread-barrier-condition thread-barrier)))
+    (bt:acquire-lock lock)
+    (unwind-protect
+         (if (zerop (decf (thread-barrier-count thread-barrier)))
+             (sb-thread:condition-broadcast cond)
+             (sb-thread:condition-wait      cond lock))
+      (bt:release-lock lock))))

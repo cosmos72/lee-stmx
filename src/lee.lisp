@@ -19,7 +19,7 @@
 ;;       of its contributors may be used to endorse or promote products
 ;;       derived from this software without specific prior written
 ;;       permission.
-
+;;
 ;; THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
 ;; "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
 ;; LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -230,9 +230,6 @@ Return NIL if FIFO is empty."
                                      :element-type 'fixnum
                                      :initial-element +empty+)))
 
-(defun new-temp-grid (grid)
-  (make-array (* (grid-width grid) (grid-height grid) (grid-depth grid))))
-
 (declaim (inline point-index))
 
 (defun point-index (grid x y z)
@@ -261,11 +258,18 @@ Return NIL if FIFO is empty."
   (let ((index (point-index grid x y z))
         (cells (grid-cells grid)))
     (the fixnum (setf (tsvref cells index) value))))
-    
+
+
+(deftype temp-grid () 'simple-vector)    
+
+(defun temp-grid (grid)
+  "Create and return a new TEMP-GRID."
+  (declare (type grid grid))
+  (make-array (* (grid-width grid) (grid-height grid) (grid-depth grid))))
 
 (defun temp-point (grid temp-grid x y z)
   (declare (type grid grid)
-           (type simple-vector temp-grid)
+           (type temp-grid temp-grid)
            (type fixnum x y z))
   (let1 index (point-index grid x y z)
     (the fixnum (svref temp-grid index))))
@@ -273,7 +277,7 @@ Return NIL if FIFO is empty."
 
 (defun (setf temp-point) (value grid temp-grid x y z)
   (declare (type grid grid)
-           (type simple-vector temp-grid)
+           (type temp-grid temp-grid)
            (type fixnum value x y z))
   (let1 index (point-index grid x y z)
     (the fixnum (setf (svref temp-grid index) value))))
@@ -308,16 +312,17 @@ Return NIL if FIFO is empty."
       (dotimes (y height)
         (format stream (if (zerop y) "(" "~& ("))
         (dotimes (x width)
-          (format t "~3d" (point grid x y z)))
+          (format stream "~3d" (point grid x y z)))
         (write-string ")" stream))
       (write-string ")" stream))
     ;; (format stream ")~%")
-    (format stream "~%")))
+    (format stream "~%")
+    nil))
 
 
 (defun show-temp-grid (grid temp-grid &optional (stream t))
   (declare (type grid grid)
-           (type simple-vector temp-grid))
+           (type temp-grid temp-grid))
   (let ((width  (grid-width  grid))
         (height (grid-height grid))
         (depth  (grid-depth  grid)))
@@ -327,7 +332,7 @@ Return NIL if FIFO is empty."
       (dotimes (y height)
         (format stream (if (zerop y) "(" "~& ("))
         (dotimes (x width)
-          (format t "~3d" (temp-point grid temp-grid x y z)))
+          (format stream "~3d" (temp-point grid temp-grid x y z)))
         (write-string ")" stream))
       (write-string ")" stream))
     ;; (format stream ")~%")
@@ -489,7 +494,8 @@ i.e. (truncate (sqrt (+ (square (- x1 x2)) (square (- y1 y2)))))."
                                 (pop words) (pop words)))
 
                  (otherwise
-                  (log:warn "unknown command ~s reading file ~s" line filename)))))))))
+                  (log:warn "unknown command ~s reading file ~s" line filename))))))))
+  t)
                 
 
 (defun fake-test-data (lee)
@@ -503,8 +509,8 @@ i.e. (truncate (sqrt (+ (square (- x1 x2)) (square (- y1 y2)))))."
     (occupy-enqueue-work lee grid 3 8 8 3)))
 
 
-(defun expand-from-to (lee temp-grid x y xgoal ygoal
-                       &optional (max-track-length (lee-max-track-length lee)))
+(defun expand-to (lee temp-grid x y xgoal ygoal
+                  &optional (max-track-length (lee-max-track-length lee)))
   "Use Lee's expansion algorithm from coordinate (x,y) to (xgoal, ygoal)
 for num iterations.
 Return true if the goal is found and false if it is not reached within
@@ -512,7 +518,7 @@ the number of iterations allowed."
 
   (declare (type lee lee)
            (type fixnum x y xgoal ygoal max-track-length)
-           (type simple-vector temp-grid))
+           (type temp-grid temp-grid))
 
   (dotimes (i (length temp-grid))
     (setf (svref temp-grid i) +temp-empty+))
@@ -549,7 +555,7 @@ the number of iterations allowed."
 
                   (let1 curr-val (temp-point grid temp-grid fx fy fz)
 
-                    (log:debug "processing (~d ~d ~d), weight ~d"
+                    (log:trace "processing (~3d ~3d ~d), weight ~d"
                                fx fy fz curr-val)
 
                     (when (> curr-val max-track-length)
@@ -576,8 +582,6 @@ the number of iterations allowed."
 
                                (when (> next-val val)
                                  (setf (temp-point grid temp-grid fdx fdy fz) val)
-                                 (log:debug "set (~d ~d ~d) to weight ~d (was ~d)"
-                                            fdx fdy fz val next-val)
                                  (unless reached?
                                    (push-new-frontier alt-front fdx fdy fz 0)))))))
 
@@ -610,7 +614,7 @@ the number of iterations allowed."
                       (setf extra-iterations 100))
 
                     (when (or reached0 reached1)
-                      (log:sexp-debug reached0 reached1)
+                      (log:sexp-trace reached0 reached1)
                       (if (zerop extra-iterations)
                           ;; (xgoal ygoal) found in time
                           (return-from outer)
@@ -632,7 +636,7 @@ the number of iterations allowed."
 
 (defun path-from-other-side (grid temp-grid x y z)
   (declare (type grid grid)
-           (type simple-vector temp-grid)
+           (type temp-grid temp-grid)
            (fixnum x y z))
   
   (let* ((zo (the fixnum (- 1 z)))
@@ -647,7 +651,7 @@ the number of iterations allowed."
 
 
 
-(defun backtrack-from-to (lee temp-grid x y xgoal ygoal netno)
+(defun backtrack-from (lee temp-grid x y xgoal ygoal netno)
   "backtrack from the goal position (XGOAL YGOAL) back to the starting position
 \(X Y) filling GRID with the specified track number NETNO.
 
@@ -662,8 +666,8 @@ Until back at starting point
 *** end algorithm ***"
   (declare (type lee lee)
            (type fixnum x y xgoal ygoal netno)
-           (type simple-vector temp-grid))
-  (log:debug "Track ~d backtrack length ~d" netno (distance x y xgoal ygoal))
+           (type temp-grid temp-grid))
+  (log:debug "track ~d backtrack length ~d" netno (distance x y xgoal ygoal))
 
   (let ((grid (lee-grid lee))
         (zgoal (if (> (abs (- xgoal x)) (abs (- ygoal y)))
@@ -673,9 +677,8 @@ Until back at starting point
       (log:debug "preferred layer ~d not reached" zgoal)
       (setf zgoal (- 1 zgoal)))
 
-    (let ((xt xgoal)
-          (yt ygoal)
-          (zt zgoal)
+    (let ((xt xgoal) (yt ygoal) (zt zgoal)
+          (xfail -1) (yfail -1) (zfail -1) ;; (x y z) of last "advanced = NIL"
           (num-vias 0)
           (forced-vias 0)
           (dist-so-far 0)
@@ -706,12 +709,19 @@ Until back at starting point
                        dir (the fixnum (+ (ash dx 1) dy)) ;; hashed dir
                        advanced t))))
            
-           (when advanced
-             (incf dist-so-far))
-
-           (log:debug "Backtracking track ~d from (~d ~d ~d), weight ~d, advanced ~a, min-d ~d"
+           (log:trace "track ~d backtracking from (~3d ~3d ~d), weight ~d, advanced ~a, min-d ~d"
                       netno xt yt zt point-t advanced min-d)
            
+           (if advanced
+             (incf dist-so-far)
+             (if (and (= xfail xt) (= yfail yt) (= zfail zt))
+               (progn
+                 (log:debug "track ~d failed, stuck here" netno)
+                 (return-from backtrack-from nil))
+               (setf xfail xt
+                     yfail yt
+                     zfail zt)))
+
            (if (and (or (and (> min-d 1)
                              ;; not preferred dir for this layer
                              (> dist-so-far 15)
@@ -724,26 +734,26 @@ Until back at starting point
                (let1 via-t (if advanced +via+ +bvia+) ;; BVIA is nowhere else to go
 
                  (when (< point +empty+) ;; +occ+ is negative
-                   (log:debug "Track ~d failed, point (~d ~d ~d) contains ~d, is not empty (case 1)"
+                   (log:debug "track ~d failed, point (~3d ~3d ~d) contains ~d, is not empty (case 1)"
                               netno xt yt zt point)
-                   (return-from backtrack-from-to nil))
+                   (return-from backtrack-from nil))
                  ;; mark via
                  (setf (temp-point grid temp-grid xt yt zt) via-t
                        (point grid xt yt zt) track
                        zt (the fixnum (- 1 zt))) ;; 0 if 1, 1 if 0
                  (let1 point (point grid xt yt zt)
                    (when (< point +empty+) ;; +occ+ is negative
-                     (log:debug "Track ~d failed, point (~d ~d ~d) contains ~d, is not empty (case 2)"
+                     (log:debug "track ~d failed, point (~3d ~3d ~d) contains ~d, is not empty (case 2)"
                                 netno xt yt zt point)
-                     (return-from backtrack-from-to nil)))
+                     (return-from backtrack-from nil)))
                  ;; and the other side
                  (setf (temp-point grid temp-grid xt yt zt) via-t
                        (point grid xt yt zt) track)
                  (incf num-vias)
                  (if advanced
-                     (log:debug "Via. dist-so-far ~d, dist-left ~d"
-                                dist-so-far (distance xt yt x y))
                      (incf forced-vias))
+                 (log:trace "~avia. dist-so-far ~d, dist-left ~d"
+                            (if advanced "" "forced ") dist-so-far (distance xt yt x y))
                  (setf dist-so-far 0))
                
                ;; else
@@ -756,41 +766,48 @@ Until back at starting point
                     (when (log:debug)
                       (unless (or (and (= xt xgoal) (= yt ygoal))
                                   (and (= xt x) (= yt y)))
-                        (log:debug "Not backtracking track ~d, point (~d ~d ~d) contains ~d, is not empty (case 3)"
+                        (log:trace "track ~d not backtracking, point (~3d ~3d ~d) contains ~d, is not empty (case 3)"
                                    netno xt yt zt point))))
                    ((and (< point +occ+) (/= point track))
-                    (log:debug "Track ~d failed, point (~d ~d ~d) contains ~d, is not empty (case 4)"
+                    (log:debug "track ~d failed, point (~3d ~3d ~d) contains ~d, is not empty (case 4)"
                                netno xt yt zt point)
-                    (return-from backtrack-from-to nil)))
+                    (return-from backtrack-from nil)))
                  
                  ;; update current position
                  (incf xt (aref *dx* zt min-d))
                  (incf yt (aref *dy* zt min-d)))))))
 
-  (log:debug "Track ~d completed" netno)
+  (log:debug "track ~d completed" netno)
   t)
 
 
                
                    
+(define-condition rollback-error (simple-error)
+  ())
+
+(defvar *rollback-error* (make-condition 'rollback-error :format-control "transaction rolled back"))
+
 
 (defun lee-connect (lee q temp-grid)
-  "Call expandFrom and backtrackFrom to create connection described by work Q.
-Return 0 if work q completes successfully,
-return 1 if it fails during expansion,
-return 2 if it fails during backtrack."
+  "Call expand-to and backtrack-from to create connection described by work Q.
+Return two values: the first is t if work q completes successfully, and nil if it fails
+either during expansion or during backtrack.
+The second is the number of transactions executed (usually one, it will be more
+in case of transaction conflicts, or zero if work fails during expansion)."
 
   (declare (type lee lee)
            (type work q)
-           (type simple-vector temp-grid))
+           (type temp-grid temp-grid))
 
   (let ((x     (work-x1 q))
         (y     (work-y1 q))
         (xgoal (work-x2 q))
         (ygoal (work-y2 q))
-        (netno (work-netno q)))
+        (netno (work-netno q))
+        (transactions 0))
 
-    (log:debug "Connecting (~d ~d) to (~d ~d) netno ~d" x y xgoal ygoal netno)
+    (log:debug "track ~d connecting (~d ~d) to (~d ~d)" netno x y xgoal ygoal)
 
     ;; Call expandFrom and backtrackFrom to create connection                
     ;; This is the only real change needed to make the program
@@ -812,12 +829,20 @@ return 2 if it fails during backtrack."
     ;; it avoids the grid 'reset' phase
     ;; needed if we do the expansion in place.
 
-    (if (expand-from-to lee temp-grid x y xgoal ygoal)
+    (if (expand-to lee temp-grid x y xgoal ygoal)
         (progn
           (log:debug "track ~d found route (~d ~d) to (~d ~d)" netno x y xgoal ygoal)
-          (if (atomic (backtrack-from-to lee temp-grid x y xgoal ygoal netno))
-              0
-              1))
+          (let1 success
+              (handler-case
+                  (atomic
+                   (incf transactions)
+                   (unless (backtrack-from lee temp-grid x y xgoal ygoal netno)
+                     ;; signal an error to cause rollback
+                     (error *rollback-error*))
+                   t)
+                (rollback-error () nil))
+
+            (values success transactions)))
         (progn
           (log:debug "track ~d cannot find route from (~d ~d) to (~d ~d)" netno x y xgoal ygoal)
-          2))))
+          (values nil 0)))))
