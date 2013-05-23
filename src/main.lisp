@@ -128,6 +128,8 @@
         (parse-lee-file lee (lee-args-input-file lee-args))
         (fake-test-data lee))
     
+    (add-weights lee)
+
     (sort-lee-work lee)
 
     ;; now start all threads

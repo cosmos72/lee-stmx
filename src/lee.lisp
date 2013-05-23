@@ -508,7 +508,26 @@ i.e. (truncate (sqrt (+ (square (- x1 x2)) (square (- y1 y2)))))."
     (occupy-enqueue-work lee grid 4 3 6 7)
     (occupy-enqueue-work lee grid 3 8 8 3)))
 
+(defun add-weights (lee)
+  (declare (type lee lee))
+  (let* ((grid     (lee-grid lee))
+         (width-2  (- (grid-width  grid) 2))
+         (height-2 (- (grid-height grid) 2)))
+    (dotimes (z 2)
+      (loop for y from 1 to height-2 do
+           (loop for x from 1 to width-2 do
+                (when (< (point grid x y z) +empty+) ;; +occ+ is negative
+                  (when (= +empty+ (point grid (1- x) y z))
+                    (setf (point grid (1- x) y z) 1))
+                  (when (= +empty+ (point grid (1+ x) y z))
+                    (setf (point grid (1+ x) y z) 1))
+                  (when (= +empty+ (point grid x (1- y) z))
+                    (setf (point grid x (1- y) z) 1))
+                  (when (= +empty+ (point grid x (1+ y) z))
+                    (setf (point grid x (1+ y) z) 1))))))))
 
+
+  
 (defun expand-to (lee temp-grid x y xgoal ygoal
                   &optional (max-track-length (lee-max-track-length lee)))
   "Use Lee's expansion algorithm from coordinate (x,y) to (xgoal, ygoal)
@@ -693,7 +712,7 @@ Until back at starting point
          for dir = 0
          for point   = (point grid xt yt zt)
          for point-t = (temp-point grid temp-grid xt yt zt)
-         for min-weight = point-t
+         for min-weight = most-positive-fixnum
          do
            (dotimes (d 4) ;; find dir to start back from
              (let* ((dx (the fixnum (aref *dx* zt d)))
@@ -703,7 +722,8 @@ Until back at starting point
                     (point-d (temp-point grid temp-grid xd yd zt)))
                    
                (when (and (>= point-d +empty+) ;; +occ+ is negative
-                          (< point-d min-weight))
+                          (< point-d min-weight)
+                          (or (< point-d point-t) (= point-t +via+) (= point-t +bvia+)))
                  (setf min-weight point-d
                        min-d d
                        dir (the fixnum (+ (ash dx 1) dy)) ;; hashed dir
@@ -717,6 +737,7 @@ Until back at starting point
              (if (and (= xfail xt) (= yfail yt) (= zfail zt))
                (progn
                  (log:debug "track ~d failed, stuck here" netno)
+                 (break)
                  (return-from backtrack-from nil))
                (setf xfail xt
                      yfail yt
@@ -775,7 +796,18 @@ Until back at starting point
                  
                  ;; update current position
                  (incf xt (aref *dx* zt min-d))
-                 (incf yt (aref *dy* zt min-d)))))))
+                 (incf yt (aref *dy* zt min-d))))))
+
+    #|
+    (when (= netno 1725)
+      (loop for yi from y to ygoal do
+           (loop for xi from x to xgoal do
+                (format t "[~d ~d] "
+                        (temp-point grid temp-grid xi yi 0)
+                        (temp-point grid temp-grid xi yi 1)))
+           (format t "~%"))
+      (break))
+    |# )
 
   (log:debug "track ~d completed" netno)
   t)
