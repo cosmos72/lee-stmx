@@ -42,8 +42,8 @@ Software: Debian GNU/Linux 7.0 (x86_64), SBCL 1.1.6 (x86_64), STMX 1.3.2
 
 <table>
 
- <tr><th rowspan="2"><b>circuit</b></th>
-     <th rowspan="2"><b>benchmark variant</b></th>
+ <tr><th rowspan="2"><b>benchmark</b></th>
+     <th rowspan="2"><b>implementation</b></th>
      <th rowspan="2"><b>threads</b></th>
      <th rowspan="2"><b>elapsed time (seconds)</b></th>
      <th colspan="2"><b>connections per second</b></th></tr>
