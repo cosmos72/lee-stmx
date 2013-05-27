@@ -23,9 +23,71 @@ Status
 ------
 
 As of May 2013, Lee-STMX is being written by Massimiliano Ghilardi
-and it is still a work-in-progress.
+and it is considered BETA quality by the author.
 
-At the same date, STMX is considered by the author to be stable.
+At the same date, STMX is considered to be stable.
+
+Results
+-------
+
+
+Benchmark results
+-----------------
+
+What follows are some timings obtained on the authors's system, and by no means they
+claim to be exact, absolute or reproducible: your mileage may vary.
+
+Date: 27 May 2013
+
+Hardware: Intel Core-i5 750 @4.0 GHz (quad-core), 16GB RAM
+
+Software: Debian GNU/Linux 7.0 (x86_64), SBCL 1.1.6 (x86_64), STMX 1.3.2
+
+
+<table>
+
+ <tr><th rowspan="2"><b>circuit</b></th>
+     <th rowspan="2"><b>benchmark variant</b></th>
+     <th rowspan="2"><b>threads</b></th>
+     <th rowspan="2"><b>elapsed time (seconds)</b></th>
+     <th><b>connections per second</b></th></tr>
+
+ <tr><th><b>successful</b></th>
+     <th><b>retried</b></th></tr>
+
+ <tr><td rowspan="12">memboard</td>
+
+     <td>single threaded</td>  <td> 1</td><td> 9.777</td><td>317.2</td><td> 0.0</td></tr>
+ <tr><td rowspan="11">STMX</td><td> 1</td><td>14.798</td><td>209.6</td><td> 0.0</td></tr>
+ <tr>                          <td> 2</td><td> 8.995</td><td>344.7</td><td> 7.4</td></tr>
+ <tr>                          <td> 3</td><td> 7.010</td><td>442.4</td><td>15.5</td></tr>
+ <tr>                          <td> 4</td><td> 6.128</td><td>506.0</td><td>24.0</td></tr>
+ <tr>                          <td> 5</td><td> 6.172</td><td>502.4</td><td>25.3</td></tr>
+ <tr>                          <td> 6</td><td> 6.089</td><td>509.3</td><td>27.4</td></tr>
+ <tr>                          <td> 8</td><td> 6.598</td><td>470.0</td><td>35.3</td></tr>
+ <tr>                          <td>10</td><td> 7.106</td><td>436.4</td><td>39.5</td></tr>
+ <tr>                          <td>20</td><td> 7.757</td><td>399.8</td><td>46.0</td></tr>
+ <tr>                          <td>30</td><td> 8.685</td><td>357.1</td><td>60.7</td></tr>
+ <tr>                          <td>50</td><td> 9.363</td><td>331.2</td><td>69.8</td></tr>
+
+ <tr><td rowspan="12">mainboard</td>
+
+     <td>single threaded</td>  <td> 1</td><td>13.824</td><td>108.9</td><td> 0.0</td></tr>
+ <tr><td rowspan="11">STMX</td><td> 1</td><td>22.390</td><td> 67.3</td><td> 0.0</td></tr>
+ <tr>                          <td> 2</td><td>13.655</td><td>110.3</td><td> 3.1</td></tr>
+ <tr>                          <td> 3</td><td> 9.716</td><td>155.0</td><td> 8.7</td></tr>
+ <tr>                          <td> 4</td><td> 8.158</td><td>184.6</td><td>15.0</td></tr>
+ <tr>                          <td> 5</td><td> 7.868</td><td>191.4</td><td>17.4</td></tr>
+ <tr>                          <td> 6</td><td> 8.258</td><td>182.4</td><td>19.6</td></tr>
+ <tr>                          <td> 8</td><td> 9.202</td><td>163.7</td><td>20.5</td></tr>
+ <tr>                          <td>10</td><td> 8.846</td><td>170.2</td><td>25.0</td></tr>
+ <tr>                          <td>20</td><td> 9.999</td><td>150.6</td><td>35.2</td></tr>
+ <tr>                          <td>30</td><td>11.015</td><td>136.7</td><td>41.2</td></tr>
+ <tr>                          <td>50</td><td>12.756</td><td>118.1</td><td>47.8</td></tr>
+
+</table>
+
+
 
 Legal
 -----

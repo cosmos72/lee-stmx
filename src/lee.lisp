@@ -35,15 +35,19 @@
 
 ;;;; * lee-stmx
 
-(in-package :lee-stmx)
+#+lee-stmx (in-package :lee-stmx)
+#-lee-stmx (in-package :lee-cg)
 
-(declaim (type fixnum +empty+ +occ+ +via+ +bvia+ +track+ +temp-empty+))
+
+(declaim (type fixnum +empty+ +occ-shift+ +occ-mask+ +occ+ +via+ +bvia+ +track+ +temp-empty+))
 (defconstant +empty+  0)
-(defconstant +occ+   -1)
-(defconstant +via+   -2)
-(defconstant +bvia+  -3)
-(defconstant +track+ -5)
-(defconstant +temp-empty+ most-positive-fixnum)
+(defconstant +occ-shift+ (1- (integer-length most-positive-fixnum)))
+(defconstant +occ-mask+  (ash 1 +occ-shift+))
+(defconstant +occ+   +occ-mask+)
+(defconstant +via+   (1+ +occ+))
+(defconstant +bvia+  (1+ +via+))
+(defconstant +track+ (1+ +bvia+))
+(defconstant +temp-empty+ (1- +occ+))
 
 ;;;; ** frontier
 
@@ -222,13 +226,19 @@ Return NIL if FIFO is empty."
   (width  0 :type fixnum)
   (height 0 :type fixnum)
   (depth  0 :type fixnum)
-  (cells  (simple-tvector 0) :type simple-tvector))
+  #+lee-stmx
+  (cells  (simple-tvector 0) :type simple-tvector)
+  #-lee-stmx
+  (cells  #() :type simple-vector))
 
 (defun grid (width height depth)
   (%make-grid :width width :height height :depth depth
-              :cells (simple-tvector (* width height depth)
-                                     :element-type 'fixnum
-                                     :initial-element +empty+)))
+              :cells
+              #+lee-stmx (simple-tvector (* width height depth)
+                                         :element-type 'fixnum
+                                         :initial-element +empty+)
+              #-lee-stmx (make-array     (* width height depth)
+                                         :initial-element +empty+)))
 
 (declaim (inline point-index))
 
@@ -244,20 +254,23 @@ Return NIL if FIFO is empty."
                           z)))))))))
   
 
+(declaim (ftype (function (grid fixnum fixnum fixnum) fixnum) point)
+         (ftype (function (fixnum grid fixnum fixnum fixnum) fixnum) (setf point)))
+
 (defun point (grid x y z)
-  (declare (type grid grid)
-           (type fixnum x y z))
   (let ((index (point-index grid x y z))
         (cells (grid-cells grid)))
-    (the fixnum (tsvref cells index))))
+    #+lee-stmx (tsvref cells index)
+    #-lee-stmx ( svref cells index)))
 
 
 (defun (setf point) (value grid x y z)
-  (declare (type grid grid)
-           (type fixnum value x y z))
   (let ((index (point-index grid x y z))
         (cells (grid-cells grid)))
-    (the fixnum (setf (tsvref cells index) value))))
+    (setf
+     #+lee-stmx (tsvref cells index)
+     #-lee-stmx ( svref cells index)
+     value)))
 
 
 (deftype temp-grid () 'simple-vector)    
@@ -267,20 +280,18 @@ Return NIL if FIFO is empty."
   (declare (type grid grid))
   (make-array (* (grid-width grid) (grid-height grid) (grid-depth grid))))
 
+(declaim (ftype (function (grid temp-grid fixnum fixnum fixnum) fixnum) temp-point)
+         (ftype (function (fixnum grid temp-grid fixnum fixnum fixnum) fixnum) (setf temp-point))
+         (inline temp-point (setf temp-point)))
+
 (defun temp-point (grid temp-grid x y z)
-  (declare (type grid grid)
-           (type temp-grid temp-grid)
-           (type fixnum x y z))
   (let1 index (point-index grid x y z)
-    (the fixnum (svref temp-grid index))))
+    (svref temp-grid index)))
 
 
 (defun (setf temp-point) (value grid temp-grid x y z)
-  (declare (type grid grid)
-           (type temp-grid temp-grid)
-           (type fixnum value x y z))
   (let1 index (point-index grid x y z)
-    (the fixnum (setf (svref temp-grid index) value))))
+    (setf (svref temp-grid index) value)))
 
 
 (declaim (inline point-ok?))
@@ -508,6 +519,12 @@ i.e. (truncate (sqrt (+ (square (- x1 x2)) (square (- y1 y2)))))."
     (occupy-enqueue-work lee grid 4 3 6 7)
     (occupy-enqueue-work lee grid 3 8 8 3)))
 
+
+(declaim (inline free?))
+(defun free? (weight)
+  (declare (type fixnum weight))
+  (zerop (logand +occ-mask+ weight)))
+
 (defun add-weights (lee)
   (declare (type lee lee))
   (let* ((grid     (lee-grid lee))
@@ -516,7 +533,7 @@ i.e. (truncate (sqrt (+ (square (- x1 x2)) (square (- y1 y2)))))."
     (dotimes (z 2)
       (loop for y from 1 to height-2 do
            (loop for x from 1 to width-2 do
-                (when (< (point grid x y z) +empty+) ;; +occ+ is negative
+                (unless (free? (point grid x y z))
                   (when (= +empty+ (point grid (1- x) y z))
                     (setf (point grid (1- x) y z) 1))
                   (when (= +empty+ (point grid (1+ x) y z))
@@ -584,13 +601,12 @@ the number of iterations allowed."
 
 
                     (loop for (dx . dy) in '((0 . 1) (1 . 0) (0 . -1) (-1 . 0))
-                       for fdx = (the fixnum (+ fx dx))
-                       for fdy = (the fixnum (+ fy dy))
+                       for fdx = (the fixnum (+ fx (the fixnum dx)))
+                       for fdy = (the fixnum (+ fy (the fixnum dy)))
                        when (point-ok? grid fdx fdy) do
 
                          (let* ((weight   (point grid fdx fdy fz))
-                                ;; +occ+ is negative
-                                (empty?   (>= weight +empty+))
+                                (empty?   (free? weight))
                                 (reached? (and (= fdx xgoal) (= fdy ygoal))))
 
                            (when (or empty? reached?)
@@ -607,8 +623,7 @@ the number of iterations allowed."
 
                     (let* ((fdz      (the fixnum (- 1 fz)))
                            (weight   (point grid fx fy fdz)))
-                      (when (>= weight +empty+) ;; +occ+ is negative
-                        
+                      (when (free? weight)
                         (let ((next-val (temp-point grid temp-grid fx fy fdz))
                               ;; setting val = (+ curr-val weight 1) as above
                               ;; probably makes more sense, but the original lee-tm benchmark
@@ -648,9 +663,13 @@ the number of iterations allowed."
     ;; *before* running out of extra-iterations  
     (or reached0 reached1)))
 
-
-(defvar *dx* #2A((-1  1  0  0) ( 0  0 -1  1)))
-(defvar *dy* #2A(( 0  0 -1  1) (-1  1  0  0)))
+(declaim (type (simple-array fixnum (2 4)) *dx* *dy*))
+(defvar *dx* (make-array '(2 4)
+                         :element-type 'fixnum
+                         :initial-contents '((-1  1  0  0) ( 0  0 -1  1))))
+(defvar *dy* (make-array '(2 4)
+                         :element-type 'fixnum
+                         :initial-contents '(( 0  0 -1  1) (-1  1  0  0))))
 
 
 (defun path-from-other-side (grid temp-grid x y z)
@@ -694,14 +713,14 @@ Until back at starting point
                    1)))
     (when (= +temp-empty+ (temp-point grid temp-grid xgoal ygoal zgoal))
       (log:debug "preferred layer ~d not reached" zgoal)
-      (setf zgoal (- 1 zgoal)))
+      (setf zgoal (the fixnum (- 1 zgoal))))
 
     (let ((xt xgoal) (yt ygoal) (zt zgoal)
           (xfail -1) (yfail -1) (zfail -1) ;; (x y z) of last "advanced = NIL"
           (num-vias 0)
           (forced-vias 0)
           (dist-so-far 0)
-          (track (- +track+ netno))) ;; +track+ is negative
+          (track (+ +track+ netno)))
 
       (declare (type fixnum zgoal xt yt zt
                      num-vias forced-vias dist-so-far track))
@@ -712,18 +731,17 @@ Until back at starting point
          for dir = 0
          for point   = (point grid xt yt zt)
          for point-t = (temp-point grid temp-grid xt yt zt)
-         for min-weight = most-positive-fixnum
+         for min-weight = (the fixnum +temp-empty+)
          do
            (dotimes (d 4) ;; find dir to start back from
-             (let* ((dx (the fixnum (aref *dx* zt d)))
-                    (dy (the fixnum (aref *dy* zt d)))
+             (let* ((dx (aref *dx* zt d))
+                    (dy (aref *dy* zt d))
                     (xd (the fixnum (+ xt dx)))
                     (yd (the fixnum (+ yt dy)))
                     (point-d (temp-point grid temp-grid xd yd zt)))
                    
-               (when (and (>= point-d +empty+) ;; +occ+ is negative
-                          (< point-d min-weight)
-                          (or (< point-d point-t) (= point-t +via+) (= point-t +bvia+)))
+               (when (and (< point-d min-weight)
+                          (< point-d point-t))
                  (setf min-weight point-d
                        min-d d
                        dir (the fixnum (+ (ash dx 1) dy)) ;; hashed dir
@@ -737,7 +755,6 @@ Until back at starting point
              (if (and (= xfail xt) (= yfail yt) (= zfail zt))
                (progn
                  (log:debug "track ~d failed, stuck here" netno)
-                 (break)
                  (return-from backtrack-from nil))
                (setf xfail xt
                      yfail yt
@@ -754,7 +771,7 @@ Until back at starting point
 
                (let1 via-t (if advanced +via+ +bvia+) ;; BVIA is nowhere else to go
 
-                 (when (< point +empty+) ;; +occ+ is negative
+                 (unless (free? point)
                    (log:debug "track ~d failed, point (~3d ~3d ~d) contains ~d, is not empty (case 1)"
                               netno xt yt zt point)
                    (return-from backtrack-from nil))
@@ -763,7 +780,7 @@ Until back at starting point
                        (point grid xt yt zt) track
                        zt (the fixnum (- 1 zt))) ;; 0 if 1, 1 if 0
                  (let1 point (point grid xt yt zt)
-                   (when (< point +empty+) ;; +occ+ is negative
+                   (unless (free? point)
                      (log:debug "track ~d failed, point (~3d ~3d ~d) contains ~d, is not empty (case 2)"
                                 netno xt yt zt point)
                      (return-from backtrack-from nil)))
@@ -780,7 +797,7 @@ Until back at starting point
                ;; else
                (progn
                  (cond ;; +occ+ is negative
-                   ((>= point +empty+)
+                   ((free? point)
                     ;; fill in track unless connection point
                     (setf (point grid xt yt zt) track))
                    ((= point +occ+)
@@ -789,7 +806,7 @@ Until back at starting point
                                   (and (= xt x) (= yt y)))
                         (log:trace "track ~d not backtracking, point (~3d ~3d ~d) contains ~d, is not empty (case 3)"
                                    netno xt yt zt point))))
-                   ((and (< point +occ+) (/= point track))
+                   ((and (> point +occ+) (/= point track))
                     (log:debug "track ~d failed, point (~3d ~3d ~d) contains ~d, is not empty (case 4)"
                                netno xt yt zt point)
                     (return-from backtrack-from nil)))
@@ -832,49 +849,54 @@ in case of transaction conflicts, or zero if work fails during expansion)."
            (type work q)
            (type temp-grid temp-grid))
 
-  (let ((x     (work-x1 q))
-        (y     (work-y1 q))
-        (xgoal (work-x2 q))
-        (ygoal (work-y2 q))
-        (netno (work-netno q))
-        (transactions 0))
+  (prog ((x     (work-x1 q))
+         (y     (work-y1 q))
+         (xgoal (work-x2 q))
+         (ygoal (work-y2 q))
+         (netno (work-netno q))
+         (success nil)
+         (transactions 0))
 
-    (log:debug "track ~d connecting (~d ~d) to (~d ~d)" netno x y xgoal ygoal)
+   start
+   (log:debug "track ~d connecting (~d ~d) to (~d ~d)" netno x y xgoal ygoal)
 
-    ;; Call expandFrom and backtrackFrom to create connection                
-    ;; This is the only real change needed to make the program
-    ;; transactional.
-    ;; Instead of using the grid 'in place' to do the expansion, we take a
-    ;; copy
-    ;; but the backtrack writes to the original grid.
-    ;; This is not a correctness issue. The transactions would still
-    ;; complete eventually without it.
-    ;; However the expansion writes are only temporary and do not logically
-    ;; conflict.
-    ;; There is a question as to whether a copy is really necessary as a
-    ;; transaction will anyway create
-    ;; its own copy. if we were then to distinguish between writes not to be
-    ;; committed (expansion) and
-    ;; those to be committed (backtrack), we would not need an explicit
-    ;; copy.
-    ;; Taking the copy is not really a computational(time) overhead because
-    ;; it avoids the grid 'reset' phase
-    ;; needed if we do the expansion in place.
+   ;; Call expandFrom and backtrackFrom to create connection                
+   ;; This is the only real change needed to make the program
+   ;; transactional.
+   ;; Instead of using the grid 'in place' to do the expansion, we take a
+   ;; copy
+   ;; but the backtrack writes to the original grid.
+   ;; This is not a correctness issue. The transactions would still
+   ;; complete eventually without it.
+   ;; However the expansion writes are only temporary and do not logically
+   ;; conflict.
+   ;; There is a question as to whether a copy is really necessary as a
+   ;; transaction will anyway create
+   ;; its own copy. if we were then to distinguish between writes not to be
+   ;; committed (expansion) and
+   ;; those to be committed (backtrack), we would not need an explicit
+   ;; copy.
+   ;; Taking the copy is not really a computational(time) overhead because
+   ;; it avoids the grid 'reset' phase
+   ;; needed if we do the expansion in place.
 
-    (if (expand-to lee temp-grid x y xgoal ygoal)
-        (progn
-          (log:debug "track ~d found route (~d ~d) to (~d ~d)" netno x y xgoal ygoal)
-          (let1 success
-              (handler-case
-                  (atomic
-                   (incf transactions)
-                   (unless (backtrack-from lee temp-grid x y xgoal ygoal netno)
-                     ;; signal an error to cause rollback
-                     (error *rollback-error*))
-                   t)
-                (rollback-error () nil))
 
-            (values success transactions)))
-        (progn
-          (log:debug "track ~d cannot find route from (~d ~d) to (~d ~d)" netno x y xgoal ygoal)
-          (values nil 0)))))
+   (if (expand-to lee temp-grid x y xgoal ygoal)
+       (progn
+         (log:debug "track ~d found route (~d ~d) to (~d ~d)" netno x y xgoal ygoal)
+
+         (#+lee-stmx atomic
+          #-lee-stmx progn
+                              
+          (incf (the fixnum transactions))
+          (unless (backtrack-from lee temp-grid x y xgoal ygoal netno)
+            ;; non-local exit causes rollback
+            (go start)))
+         (setf success t))
+
+       (progn
+         (log:debug "track ~d cannot find route from (~d ~d) to (~d ~d)" netno x y xgoal ygoal)
+         (setf success nil)))
+
+   (return (values (the boolean success)
+                   (the fixnum transactions)))))

@@ -34,7 +34,8 @@
 
 ;;;; * lee-stmx
 
-(in-package :lee-stmx)
+#+lee-stmx (in-package :lee-stmx)
+#-lee-stmx (in-package :lee-cg)
 
 
 (defstruct (lee-args (:constructor lee-args))

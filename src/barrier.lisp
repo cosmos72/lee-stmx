@@ -34,30 +34,38 @@
 
 ;;;; * lee-stmx
 
-(in-package :lee-stmx)
+#+lee-stmx (in-package :lee-stmx)
+#-lee-stmx (in-package :lee-cg)
+
 
 (declaim (inline %make-thread-barrier))
 
 (defstruct (thread-barrier (:constructor %make-thread-barrier))
   (lock        (bt:make-lock "thread-barrier") :read-only t)
-  (condition   (bt:make-condition-variable :name "thread-barrier-condition")  :read-only t)
-  (count       1  :type fixnum))
+  (conditions  nil :type list)
+  (count       1   :type fixnum))
 
 
 (defun thread-barrier (thread-count)
   "Create and return a THREAD-BARRIER that THREAD-COUNT threads can use to wait on."
   (declare (type fixnum thread-count))
-  (%make-thread-barrier :count thread-count))
+  (%make-thread-barrier
+   :count thread-count))
+
 
 
 (defun join-thread-barrier (thread-barrier)
   "Block until THREAD-COUNT threads invoke this function on the same THREAD-BARRIER."
   (declare (type thread-barrier thread-barrier))
-  (let ((lock (thread-barrier-lock thread-barrier))
-        (cond (thread-barrier-condition thread-barrier)))
+  (let1 lock (thread-barrier-lock thread-barrier)
     (bt:acquire-lock lock)
     (unwind-protect
-         (if (zerop (decf (thread-barrier-count thread-barrier)))
-             (sb-thread:condition-broadcast cond)
-             (sb-thread:condition-wait      cond lock))
+         (if (zerop (the fixnum (decf (thread-barrier-count thread-barrier))))
+             (progn
+               (loop for cond in (thread-barrier-conditions thread-barrier) do
+                    (bt:condition-notify cond))
+               (setf (thread-barrier-conditions thread-barrier) nil))
+             (let1 cond (bt:make-condition-variable :name "thread-barrier condition")
+               (push cond (thread-barrier-conditions thread-barrier))
+               (sb-thread:condition-wait cond lock)))
       (bt:release-lock lock))))

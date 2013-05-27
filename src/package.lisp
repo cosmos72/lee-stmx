@@ -37,8 +37,11 @@
 
 (in-package :cl-user)
 
-(defpackage #:lee-stmx
+;;(eval-when (:compile-toplevel :load-toplevel :execute)
+;;  (pushnew :lee-stmx *features*))
 
+(defpackage #+lee-stmx #:lee-stmx
+            #-lee-stmx #:lee-cg
   (:use #:cl
         #:bordeaux-threads
         #:stmx.lang
