@@ -27,10 +27,6 @@ and it is considered BETA quality by the author.
 
 At the same date, STMX is considered to be stable.
 
-Results
--------
-
-
 Benchmark results
 -----------------
 
@@ -50,7 +46,7 @@ Software: Debian GNU/Linux 7.0 (x86_64), SBCL 1.1.6 (x86_64), STMX 1.3.2
      <th rowspan="2"><b>benchmark variant</b></th>
      <th rowspan="2"><b>threads</b></th>
      <th rowspan="2"><b>elapsed time (seconds)</b></th>
-     <th><b>connections per second</b></th></tr>
+     <th colspan="2"><b>connections per second</b></th></tr>
 
  <tr><th><b>successful</b></th>
      <th><b>retried</b></th></tr>
