@@ -53,33 +53,33 @@ Software: Debian GNU/Linux 7.0 (x86_64), SBCL 1.1.6 (x86_64), STMX 1.3.2
 
  <tr><td rowspan="12">memboard</td>
 
-     <td>single threaded</td>  <td> 1</td><td> 9.777</td><td>317.2</td><td> 0.0</td></tr>
- <tr><td rowspan="11">STMX</td><td> 1</td><td>14.798</td><td>209.6</td><td> 0.0</td></tr>
- <tr>                          <td> 2</td><td> 8.995</td><td>344.7</td><td> 7.4</td></tr>
- <tr>                          <td> 3</td><td> 7.010</td><td>442.4</td><td>15.5</td></tr>
- <tr>                          <td> 4</td><td> 6.128</td><td>506.0</td><td>24.0</td></tr>
- <tr>                          <td> 5</td><td> 6.172</td><td>502.4</td><td>25.3</td></tr>
- <tr>                          <td> 6</td><td> 6.089</td><td>509.3</td><td>27.4</td></tr>
- <tr>                          <td> 8</td><td> 6.598</td><td>470.0</td><td>35.3</td></tr>
+     <td>single threaded</td>  <td> 1</td><td> 9.770</td><td>317.4</td><td> 0.0</td></tr>
+ <tr><td rowspan="11">STMX</td><td> 1</td><td>14.020</td><td>221.2</td><td> 0.0</td></tr>
+ <tr>                          <td> 2</td><td> 8.061</td><td>384.7</td><td> 8.1</td></tr>
+ <tr>                          <td> 3</td><td> 6.517</td><td>475.8</td><td>17.2</td></tr>
+ <tr>                          <td> 4</td><td> 5.653</td><td>548.6</td><td>26.9</td></tr>
+ <tr>                          <td> 5</td><td> 5.688</td><td>545.2</td><td>29.0</td></tr>
+ <tr>                          <td> 6</td><td> 5.747</td><td>539.8</td><td>28.7</td></tr>
+ <tr>                          <td> 8</td><td> 6.366</td><td>487.1</td><td>35.9</td></tr>
  <tr>                          <td>10</td><td> 7.106</td><td>436.4</td><td>39.5</td></tr>
- <tr>                          <td>20</td><td> 7.757</td><td>399.8</td><td>46.0</td></tr>
- <tr>                          <td>30</td><td> 8.685</td><td>357.1</td><td>60.7</td></tr>
- <tr>                          <td>50</td><td> 9.363</td><td>331.2</td><td>69.8</td></tr>
+ <tr>                          <td>20</td><td> 7.592</td><td>408.5</td><td>51.9</td></tr>
+ <tr>                          <td>30</td><td> 8.367</td><td>370.6</td><td>61.2</td></tr>
+ <tr>                          <td>50</td><td> 9.244</td><td>335.5</td><td>66.5</td></tr>
 
  <tr><td rowspan="12">mainboard</td>
 
-     <td>single threaded</td>  <td> 1</td><td>13.824</td><td>108.9</td><td> 0.0</td></tr>
- <tr><td rowspan="11">STMX</td><td> 1</td><td>22.390</td><td> 67.3</td><td> 0.0</td></tr>
- <tr>                          <td> 2</td><td>13.655</td><td>110.3</td><td> 3.1</td></tr>
- <tr>                          <td> 3</td><td> 9.716</td><td>155.0</td><td> 8.7</td></tr>
- <tr>                          <td> 4</td><td> 8.158</td><td>184.6</td><td>15.0</td></tr>
- <tr>                          <td> 5</td><td> 7.868</td><td>191.4</td><td>17.4</td></tr>
- <tr>                          <td> 6</td><td> 8.258</td><td>182.4</td><td>19.6</td></tr>
- <tr>                          <td> 8</td><td> 9.202</td><td>163.7</td><td>20.5</td></tr>
- <tr>                          <td>10</td><td> 8.846</td><td>170.2</td><td>25.0</td></tr>
- <tr>                          <td>20</td><td> 9.999</td><td>150.6</td><td>35.2</td></tr>
- <tr>                          <td>30</td><td>11.015</td><td>136.7</td><td>41.2</td></tr>
- <tr>                          <td>50</td><td>12.756</td><td>118.1</td><td>47.8</td></tr>
+     <td>single threaded</td>  <td> 1</td><td>13.580</td><td>110.9</td><td> 0.0</td></tr>
+ <tr><td rowspan="11">STMX</td><td> 1</td><td>21.325</td><td> 70.6</td><td> 0.0</td></tr>
+ <tr>                          <td> 2</td><td>11.648</td><td>129.3</td><td> 4.3</td></tr>
+ <tr>                          <td> 3</td><td> 9.459</td><td>159.2</td><td> 9.4</td></tr>
+ <tr>                          <td> 4</td><td> 7.738</td><td>194.6</td><td>14.6</td></tr>
+ <tr>                          <td> 5</td><td> 7.340</td><td>205.2</td><td>17.7</td></tr>
+ <tr>                          <td> 6</td><td> 7.496</td><td>200.9</td><td>18.7</td></tr>
+ <tr>                          <td> 8</td><td> 8.202</td><td>183.6</td><td>24.8</td></tr>
+ <tr>                          <td>10</td><td> 8.304</td><td>181.4</td><td>27.1</td></tr>
+ <tr>                          <td>20</td><td> 9.040</td><td>166.6</td><td>30.5</td></tr>
+ <tr>                          <td>30</td><td>10.736</td><td>140.3</td><td>43.2</td></tr>
+ <tr>                          <td>50</td><td>11.682</td><td>128.9</td><td>45.3</td></tr>
 
 </table>
 
