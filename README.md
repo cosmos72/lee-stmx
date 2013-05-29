@@ -53,33 +53,33 @@ Software: Debian GNU/Linux 7.0 (x86_64), SBCL 1.1.6 (x86_64), STMX 1.3.2
 
  <tr><td rowspan="12">memboard</td>
 
-     <td>single threaded</td>  <td> 1</td><td> 9.770</td><td>317.4</td><td> 0.0</td></tr>
- <tr><td rowspan="11">STMX</td><td> 1</td><td>14.020</td><td>221.2</td><td> 0.0</td></tr>
+     <td>single threaded</td>  <td> 1</td><td> 8.945</td><td>346.7</td><td> 0.0</td></tr>
+ <tr><td rowspan="11">STMX</td><td> 1</td><td>12.792</td><td>242.4</td><td> 0.0</td></tr>
  <tr>                          <td> 2</td><td> 8.061</td><td>384.7</td><td> 8.1</td></tr>
  <tr>                          <td> 3</td><td> 6.517</td><td>475.8</td><td>17.2</td></tr>
  <tr>                          <td> 4</td><td> 5.653</td><td>548.6</td><td>26.9</td></tr>
  <tr>                          <td> 5</td><td> 5.688</td><td>545.2</td><td>29.0</td></tr>
  <tr>                          <td> 6</td><td> 5.747</td><td>539.8</td><td>28.7</td></tr>
- <tr>                          <td> 8</td><td> 6.366</td><td>487.1</td><td>35.9</td></tr>
- <tr>                          <td>10</td><td> 7.106</td><td>436.4</td><td>39.5</td></tr>
- <tr>                          <td>20</td><td> 7.592</td><td>408.5</td><td>51.9</td></tr>
- <tr>                          <td>30</td><td> 8.367</td><td>370.6</td><td>61.2</td></tr>
- <tr>                          <td>50</td><td> 9.244</td><td>335.5</td><td>66.5</td></tr>
+ <tr>                          <td> 8</td><td> 6.188</td><td>501.1</td><td>40.1</td></tr>
+ <tr>                          <td>10</td><td> 6.112</td><td>507.4</td><td>34.8</td></tr>
+ <tr>                          <td>20</td><td> 7.335</td><td>422.8</td><td>53.6</td></tr>
+ <tr>                          <td>30</td><td> 7.927</td><td>391.2</td><td>66.0</td></tr>
+ <tr>                          <td>50</td><td> 8.881</td><td>349.2</td><td>74.5</td></tr>
 
  <tr><td rowspan="12">mainboard</td>
 
-     <td>single threaded</td>  <td> 1</td><td>13.580</td><td>110.9</td><td> 0.0</td></tr>
- <tr><td rowspan="11">STMX</td><td> 1</td><td>21.325</td><td> 70.6</td><td> 0.0</td></tr>
- <tr>                          <td> 2</td><td>11.648</td><td>129.3</td><td> 4.3</td></tr>
- <tr>                          <td> 3</td><td> 9.459</td><td>159.2</td><td> 9.4</td></tr>
- <tr>                          <td> 4</td><td> 7.738</td><td>194.6</td><td>14.6</td></tr>
- <tr>                          <td> 5</td><td> 7.340</td><td>205.2</td><td>17.7</td></tr>
- <tr>                          <td> 6</td><td> 7.496</td><td>200.9</td><td>18.7</td></tr>
- <tr>                          <td> 8</td><td> 8.202</td><td>183.6</td><td>24.8</td></tr>
- <tr>                          <td>10</td><td> 8.304</td><td>181.4</td><td>27.1</td></tr>
- <tr>                          <td>20</td><td> 9.040</td><td>166.6</td><td>30.5</td></tr>
- <tr>                          <td>30</td><td>10.736</td><td>140.3</td><td>43.2</td></tr>
- <tr>                          <td>50</td><td>11.682</td><td>128.9</td><td>45.3</td></tr>
+     <td>single threaded</td>  <td> 1</td><td>12.216</td><td>123.3</td><td> 0.0</td></tr>
+ <tr><td rowspan="11">STMX</td><td> 1</td><td>19.421</td><td> 77.5</td><td> 0.0</td></tr>
+ <tr>                          <td> 2</td><td>12.035</td><td>125.1</td><td> 4.3</td></tr>
+ <tr>                          <td> 3</td><td> 9.052</td><td>166.4</td><td> 9.3</td></tr>
+ <tr>                          <td> 4</td><td> 7.478</td><td>201.4</td><td>16.3</td></tr>
+ <tr>                          <td> 5</td><td> 7.244</td><td>207.9</td><td>16.2</td></tr>
+ <tr>                          <td> 6</td><td> 7.458</td><td>201.9</td><td>18.8</td></tr>
+ <tr>                          <td> 8</td><td> 7.876</td><td>191.2</td><td>24.8</td></tr>
+ <tr>                          <td>10</td><td> 8.097</td><td>186.0</td><td>27.3</td></tr>
+ <tr>                          <td>20</td><td> 8.983</td><td>167.7</td><td>35.6</td></tr>
+ <tr>                          <td>30</td><td>10.549</td><td>142.8</td><td>44.3</td></tr>
+ <tr>                          <td>50</td><td>10.540</td><td>142.9</td><td>50.4</td></tr>
 
 </table>
 

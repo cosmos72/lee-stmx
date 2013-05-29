@@ -256,7 +256,8 @@ Return NIL if FIFO is empty."
 
 (declaim (ftype (function (grid fixnum fixnum fixnum) fixnum) point point-tx point-notx)
          (ftype (function (fixnum grid fixnum fixnum fixnum) fixnum)
-                (setf point-tx) (setf point-notx)))
+                (setf point-tx) (setf point-notx))
+         (inline point point-tx point-notx))
 
 (defun point (grid x y z)
   (let ((index (point-index grid x y z))
@@ -354,24 +355,16 @@ Return NIL if FIFO is empty."
     nil))
 
 
-(defun show-temp-grid (grid temp-grid &optional (stream t))
+(defun show-temp-grid (grid temp-grid x1 y1 x2 y2 &optional (stream t))
   (declare (type grid grid)
-           (type temp-grid temp-grid))
-  (let ((width  (grid-width  grid))
-        (height (grid-height grid))
-        (depth  (grid-depth  grid)))
-    ;; (format stream "#3A(~%")
-    (dotimes (z depth)
-      (format stream (if (zerop z) "(" "~&~%("))
-      (dotimes (y height)
-        (format stream (if (zerop y) "(" "~& ("))
-        (dotimes (x width)
-          (format stream "~3d" (temp-point grid temp-grid x y z)))
-        (write-string ")" stream))
-      (write-string ")" stream))
-    ;; (format stream ")~%")
-    (format stream "~%")))
-    
+           (type temp-grid temp-grid)
+           (type fixnum x1 y1 x2 y2))
+  (loop for y from (1- (min y1 y2)) to (1+ (max y1 y2)) do
+       (loop for x from (1- (min x1 x2)) to (1+ (max x1 x2)) do
+            (format stream "[~d ~d] "
+                    (temp-point grid temp-grid x y 0)
+                    (temp-point grid temp-grid x y 1)))
+       (format stream "~&")))
 
       
         
@@ -554,17 +547,30 @@ i.e. (truncate (sqrt (+ (square (- x1 x2)) (square (- y1 y2)))))."
          (width-2  (- (grid-width  grid) 2))
          (height-2 (- (grid-height grid) 2)))
     (dotimes (z 2)
-      (loop for y from 1 to height-2 do
-           (loop for x from 1 to width-2 do
-                (unless (free? (point-notx grid x y z))
-                  (when (= +empty+ (point-notx grid (1- x) y z))
-                    (setf (point-notx grid (1- x) y z) 1))
-                  (when (= +empty+ (point-notx grid (1+ x) y z))
-                    (setf (point-notx grid (1+ x) y z) 1))
-                  (when (= +empty+ (point-notx grid x (1- y) z))
-                    (setf (point-notx grid x (1- y) z) 1))
-                  (when (= +empty+ (point-notx grid x (1+ y) z))
-                    (setf (point-notx grid x (1+ y) z) 1))))))))
+      (loop for x from 1 to width-2 do
+           (loop for y from 1 to height-2 do
+                (let1 p (point-notx grid x y z)
+                  (cond
+                    ((not (free? p))
+                     (when (= +empty+ (point-notx grid (1- x) y z))
+                       (setf (point-notx grid (1- x) y z) 1))
+                     (when (= +empty+ (point-notx grid x (1- y) z))
+                       (setf (point-notx grid x (1- y) z) 1))
+                     (when (= +empty+ (point-notx grid (1+ x) y z))
+                       (setf (point-notx grid (1+ x) y z) 1))
+                     (when (= +empty+ (point-notx grid x (1+ y) z))
+                       (setf (point-notx grid x (1+ y) z) 1)))
+                    ((/= +empty+ p)
+                     (when (= +empty+ (point-notx grid (1- x) y z))
+                       (setf (point-notx grid (1- x) y z) (1- p)))
+                     (when (= +empty+ (point-notx grid (1+ x) y z))
+                       (setf (point-notx grid (1+ x) y z) (1- p)))
+                     (when (= +empty+ (point-notx grid x (1- y) z))
+                       (setf (point-notx grid x (1- y) z) (1- p)))
+                     (when (= +empty+ (point-notx grid x (1+ y) z))
+                       (setf (point-notx grid x (1+ y) z) (1- p)))))))))))
+
+                    
 
 
   
@@ -633,12 +639,10 @@ the number of iterations allowed."
                                 (reached? (and (= fdx xgoal) (= fdy ygoal))))
 
                            (when (or empty? reached?)
-                             (let ((val (if reached?
-                                            (the fixnum (+ curr-val 1))
-                                            (the fixnum (+ curr-val 1 weight))))
+                             (let ((val (the fixnum (+ curr-val 1 weight)))
                                    (next-val (temp-point grid temp-grid fdx fdy fz)))
 
-                               (when (> next-val val)
+                               (when (or reached? (> next-val val))
                                  (setf (temp-point grid temp-grid fdx fdy fz) val)
                                  (unless reached?
                                    (push-new-frontier alt-front fdx fdy fz 0)))))))
@@ -672,7 +676,7 @@ the number of iterations allowed."
 
                     (when (or reached0 reached1)
                       (log:sexp-trace reached0 reached1)
-                      (if (zerop extra-iterations)
+                      (if (or (and reached0 reached1) (zerop extra-iterations))
                           ;; (xgoal ygoal) found in time
                           (return-from outer)
                           (decf extra-iterations))))))
@@ -734,6 +738,7 @@ Until back at starting point
         (zgoal (if (> (abs (- xgoal x)) (abs (- ygoal y)))
                    0
                    1)))
+
     (when (= +temp-empty+ (temp-point grid temp-grid xgoal ygoal zgoal))
       (log:debug "preferred layer ~d not reached" zgoal)
       (setf zgoal (the fixnum (- 1 zgoal))))
@@ -770,8 +775,8 @@ Until back at starting point
                        dir (the fixnum (+ (ash dx 1) dy)) ;; hashed dir
                        advanced t))))
            
-           (log:trace "track ~d backtracking from (~3d ~3d ~d), weight ~d, advanced ~a, min-d ~d"
-                      netno xt yt zt point-t advanced min-d)
+           (log:trace "track ~d backtracking from (~d ~d ~d), weight ~d, advanced ~a,~a min-d ~d"
+                      netno xt yt zt point-t advanced (if advanced "  " "") min-d)
            
            (if advanced
              (incf dist-so-far)
