@@ -44,6 +44,7 @@
 
   :depends-on (:log4cl
                :bordeaux-threads
+               :trivial-garbage
                :stmx)
 
   :components ((:static-file "lee-stmx.asd")

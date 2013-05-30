@@ -865,6 +865,7 @@ Until back at starting point
 
 (defvar *rollback-error* (make-condition 'rollback-error :format-control "transaction rolled back"))
 
+(declaim (ftype (function (lee work temp-grid) (values boolean fixnum)) lee-connect))
 
 (defun lee-connect (lee q temp-grid)
   "Call expand-to and backtrack-from to create connection described by work Q.
@@ -926,5 +927,4 @@ in case of transaction conflicts, or zero if work fails during expansion)."
          (log:debug "track ~d cannot find route from (~d ~d) to (~d ~d)" netno x y xgoal ygoal)
          (setf success nil)))
 
-   (return (values (the boolean success)
-                   (the fixnum transactions)))))
+   (return (values success transactions))))

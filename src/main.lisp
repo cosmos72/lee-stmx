@@ -69,7 +69,9 @@
         (retries  0)
         (fails    0))
 
-    (loop for q = (atomic-pop (lee-work lee))
+    (declare (type fixnum commits retries fails))
+
+    (loop for q = (#+lee-stmx atomic-pop #-lee-stmx pop (lee-work lee))
        while q do
          (multiple-value-bind (success transactions)
              (lee-connect lee q temp-grid)
@@ -107,7 +109,15 @@
     (join-thread-barrier *end-barrier*)
 
     (let1 end-time (get-internal-real-time)
-      (/ (- end-time start-time) (float internal-time-units-per-second)))))
+      (/ (- end-time start-time) (coerce internal-time-units-per-second 'single-float)))))
+
+
+(defstruct (lee-result (:constructor lee-result))
+  (duration 0.0 :type single-float)
+  (threads  0   :type fixnum)
+  (commits  0   :type fixnum)
+  (retries  0   :type fixnum)
+  (fails    0   :type fixnum))
 
 
 (defun run-benchmark (lee-args)
@@ -134,38 +144,53 @@
     (sort-lee-work lee)
 
     ;; now start all threads
-    (loop for thread-arg in (rest thread-args)
-       for thread-id from 2
-       do
-         (let1 arg thread-arg
-           (bt:make-thread (lambda () (timed-run-transactions arg))
-                           :name (format nil "lee ~d" thread-id))))
+    (let1 thread-id 2
+      (loop for thread-arg in (rest thread-args)
+         do
+           (let1 arg thread-arg
+             (bt:make-thread (lambda () (timed-run-transactions arg))
+                             :name (format nil "lee ~d" (incf (the fixnum thread-id)))))))
 
-    (let  ;; run one instance in this thread
+    ;; run one instance in this thread
+    (let
         ((duration (timed-run-transactions (first thread-args)))
          (commits  0)
          (retries  0)
          (fails    0))
 
+      (declare (type single-float duration)
+               (type fixnum commits retries fails))
+
       ;; print statistics
-      (log:info "Duration ~a seconds" duration)
+      ;; (log:info "Duration ~a seconds" duration)
 
       (dolist (arg thread-args)
         (incf commits (thread-args-commits arg))
         (incf retries (thread-args-retries arg))
         (incf fails   (thread-args-fails   arg)))
 
+      #|
       (log:info "Total commits ~d" commits)
       (log:info "Total failed  ~d" fails)
       (log:info "Total retried ~d" retries)
       (unless (zerop duration)
         (log:info "Total transactions per second ~a" (/ (+ commits fails) duration))
-        (log:info "Total retried      per second ~a" (/ retries duration))))
+        (log:info "Total retried      per second ~a" (/ retries duration)))
+      |#
 
-    (let1 output-file (lee-args-output-file lee-args)
-      (unless (zerop (length output-file))
-        (with-open-file (stream output-file :direction :output :if-exists :supersede)
-          (show-grid (lee-grid lee) stream))))))
+      (let1 output-file (lee-args-output-file lee-args)
+        (unless (zerop (length output-file))
+          (with-open-file (stream output-file :direction :output :if-exists :supersede)
+            (show-grid (lee-grid lee) stream))))
+
+      (lee-result :threads  n
+                  :duration duration
+                  :commits  commits
+                  :retries  retries
+                  :fails    fails))))
+
+    
+
 
 
 
@@ -229,9 +254,11 @@
   (declare (type list args-list))
 
   (let1 args (parse-arguments args-list)
-    (log:info "Lee-STMX benchmark arguments:")
+    ;; (log:info "Lee-STMX benchmark arguments:")
     (log:info "~s" args)
-    (run-benchmark args)))
+    (let1 result (run-benchmark args)
+      (log:info "~s" result)
+      result)))
 
 
 (defun main (&key (input-file "") (output-file "") (threads 1) (validate nil))
@@ -241,3 +268,37 @@
            (type boolean validate))
   (cmd-line-main (list :input-file input-file :output-file output-file
                        :threads threads :validate validate)))
+
+
+
+(defun loop-main (&key (input-file "") (output-file "")
+                  (threads '(1 2 3 4 5 6 8 10 20 30 50))
+                  (runs 5) (validate nil))
+  (declare (type fixnum runs))
+  (let1 all-results nil
+    (dolist (th threads)
+      (let1 results nil
+        (dotimes (i runs)
+          (trivial-garbage:gc :full t)
+          (let1 result (main :input-file input-file :output-file output-file
+                             :threads th :validate validate)
+            (when (<= (lee-result-fails result) 2)
+              (push result results))))
+        (when results
+          (push (first (sort results #'< :key #'lee-result-duration))
+                all-results))))
+    (nreverse all-results)))
+
+
+(defun loop-main-html (&key (input-file "") (output-file "")
+                       (threads '(1 2 3 4 5 6 8 10 20 30 50))
+                       (runs 5) (validate nil))
+  (declare (type fixnum runs))
+
+  (dolist (r (loop-main :input-file input-file :output-file output-file
+                             :threads threads :runs runs :validate validate))
+    (let ((d    (lee-result-duration r))
+          (comm (lee-result-commits  r))
+          (fail (lee-result-fails    r))
+          (retr (lee-result-retries  r)))
+      (format t " <tr>                          <td>~2d</td><td>~3$</td><td>~1$</td><td>~1$</td></tr>~%" (lee-result-threads r) d (/ (+ comm fail) d) (/ retr d)))))
