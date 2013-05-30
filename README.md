@@ -46,14 +46,14 @@ Software: Debian GNU/Linux 7.0 (x86_64), SBCL 1.1.6 (x86_64), STMX 1.3.2
      <th rowspan="2"><b>implementation</b></th>
      <th rowspan="2"><b>threads</b></th>
      <th rowspan="2"><b>elapsed time (seconds)</b></th>
-     <th colspan="2"><b>connections per second</b></th></tr>
+     <th colspan="2"><b>transactions per second</b></th></tr>
 
  <tr><th><b>successful</b></th>
      <th><b>retried</b></th></tr>
 
  <tr><td rowspan="12">memboard</td>
 
-     <td>single threaded</td>  <td> 1</td><td> 8.945</td><td>346.7</td><td> 0.0</td></tr>
+     <td>single threaded</td>  <td> 1</td><td> 8.890</td><td>348.8</td><td> 0.0</td></tr>
  <tr><td rowspan="11">STMX</td><td> 1</td><td>12.611</td><td>245.9</td><td> 0.0</td></tr>
  <tr>                          <td> 2</td><td> 7.862</td><td>394.4</td><td> 8.9</td></tr>
  <tr>                          <td> 3</td><td> 6.212</td><td>499.2</td><td>18.2</td></tr>
@@ -68,7 +68,7 @@ Software: Debian GNU/Linux 7.0 (x86_64), SBCL 1.1.6 (x86_64), STMX 1.3.2
 
  <tr><td rowspan="12">mainboard</td>
 
-     <td>single threaded</td>  <td> 1</td><td>12.216</td><td>123.3</td><td> 0.0</td></tr>
+     <td>single threaded</td>  <td> 1</td><td>12.150</td><td>124.0</td><td> 0.0</td></tr>
  <tr><td rowspan="11">STMX</td><td> 1</td><td>18.727</td><td> 80.4</td><td> 0.0</td></tr>
  <tr>                          <td> 2</td><td>10.328</td><td>145.8</td><td> 4.6</td></tr>
  <tr>                          <td> 3</td><td> 7.413</td><td>203.2</td><td>10.8</td></tr>
