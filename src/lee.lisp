@@ -66,58 +66,27 @@
 
 ;;;; ** free frontier pool
 
-(declaim (type list *frontier-pool* *cons-pool*))
+(declaim (type list *frontier-pool*))
 (defvar *frontier-pool* nil)
-(defvar *cons-pool* nil)
 
 (eval-when (:load-toplevel :execute)
-  (dolist (sym '(*frontier-pool* *cons-pool*))
-    (unless (assoc sym bt:*default-special-bindings* :test 'eq)
-      (push (cons sym nil) bt:*default-special-bindings*))))
+  (save-thread-initial-bindings *frontier-pool*))
 
-(declaim (inline cons-from-pool
-                 cons-to-pool
-                 cons-and-frontier-from-pool
-                 cons-and-frontier-to-pool
-                 frontier-to-pool))
+(declaim (inline new-cons-and-frontier
+                 free-cons-and-frontier
+                 free-frontier))
 
-(defun cons-from-pool ()
-  "Get a CONS from free cons pool if available, and return it."
-  (when-bind cell *cons-pool*
-    (setf *cons-pool* (rest cell)
-          (rest cell) nil)
-    cell))
-
-(defun new-cons (&optional a b)
-  "Get a CONS from free cons pool, otherwise allocate it. Return the CONS."
-  (if-bind cell (cons-from-pool)
-    (progn
-      (setf (first cell) a
-            (rest  cell) b)
-      cell)
-    (cons a b)))
-
-(defun cons-to-pool (cell)
-  "Add a CONS cell to free cons pool.
-Note: (first cell) should be NIL."
-  (declare (type cons cell))
-  (setf (rest cell) *cons-pool*
-        *cons-pool* cell)
-  nil)
-
-
-(defun cons-and-frontier-from-pool ()
+(defun new-cons-and-frontier ()
   "Get a CONS and a FRONTIER from pool if available, and return them."
-  (block nil
-    (when-bind cell *frontier-pool*
+  (if-bind cell *frontier-pool*
+    (progn
       (setf *frontier-pool* (rest cell)
             (rest cell) nil)
-      (return cell))
-    (awhen (cons-from-pool)
-      (return it))))
+      cell)
+    (cons^)))
 
 
-(defun cons-and-frontier-to-pool (cell)
+(defun free-cons-and-frontier (cell)
   "Add (first cell) - which must be a FRONTIER - to the free frontier pool."
   (declare (type cons cell))
   (setf (rest cell) *frontier-pool*
@@ -125,7 +94,7 @@ Note: (first cell) should be NIL."
   nil)
 
 
-(defun frontier-fifo-to-pool (head tail)
+(defun free-frontier-fifo (head tail)
   "Add a list of FRONTIERs to the free frontier pool.
 TAIL must be the last CONS cell of the list starting at HEAD."
   (declare (type cons head tail))
@@ -134,10 +103,10 @@ TAIL must be the last CONS cell of the list starting at HEAD."
   nil)
 
 
-(defun frontier-to-pool (f)
+(defun free-frontier (f)
   "Add frontier F to the free frontier pool."
   (declare (type frontier f))
-  (cons-and-frontier-to-pool (new-cons f)))
+  (free-cons-and-frontier (cons^ f)))
 
 
 
@@ -150,7 +119,7 @@ TAIL must be the last CONS cell of the list starting at HEAD."
   (tail nil :type cons))
 
 (defun frontier-fifo ()
-  (let1 cell (new-cons)
+  (let1 cell (cons^)
     (%make-frontier-fifo :head cell :tail cell)))
 
 
@@ -165,20 +134,16 @@ TAIL must be the last CONS cell of the list starting at HEAD."
   "Create and append a new FRONTIER to FIFO."
   (declare (type frontier-fifo fifo)
            (type fixnum x y z dw))
-  (let* ((cell (cons-and-frontier-from-pool))
-         (f    (if cell (first cell) nil)))
-
-    (if cell
-        (setf (first cell) nil)
-        (setf cell (cons nil nil)))
+  (let* ((cell (new-cons-and-frontier))
+         (f    (first cell)))
 
     (if f
-        (setf (frontier-x  f) x
+        (setf (first    cell) nil
+              (frontier-x  f) x
               (frontier-y  f) y
               (frontier-z  f) z
               (frontier-dw f) dw)
         (setf f (frontier x y z dw)))
-
 
     (let1 tail (frontier-fifo-tail fifo)
       (setf (first tail) f
@@ -198,7 +163,7 @@ Return NIL if FIFO is empty."
         (let1 f (first cell)
           (setf (frontier-fifo-head fifo) (rest cell)
                 (first cell) nil)
-          (cons-to-pool cell)
+          (free-cons^ cell)
           (the frontier f)))))
 
 (defun clear-frontier-fifo (fifo)
@@ -208,7 +173,7 @@ Return NIL if FIFO is empty."
     (unless (eq head tail)
       (rotatef (first head) (first tail))
       (let1 next (rest head)
-        (frontier-fifo-to-pool next tail))
+        (free-frontier-fifo next tail))
       (setf (rest head) nil
             (frontier-fifo-tail fifo) head))
     fifo))
@@ -612,7 +577,7 @@ the number of iterations allowed."
             for fz  = (frontier-z  f)
             for fdw = (frontier-dw f) do
 
-              (frontier-to-pool f)
+              (free-frontier f)
 
               (if (plusp fdw)
                   ;; Used? fdw actually seems to always be zero...
