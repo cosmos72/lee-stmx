@@ -33,7 +33,7 @@ Benchmark results
 What follows are some timings obtained on the authors's system, and by no means they
 claim to be exact, absolute or reproducible: your mileage may vary.
 
-Date: 27 May 2013
+Date: 06 June 2013
 
 Hardware: Intel Core-i5 750 @4.0 GHz (quad-core), 16GB RAM
 
@@ -54,13 +54,13 @@ Software: Debian GNU/Linux 7.0 (x86_64), SBCL 1.1.6 (x86_64), STMX 1.3.2
  <tr><td rowspan="12">memboard</td>
 
      <td>single threaded</td>  <td> 1</td><td> 8.890</td><td>348.8</td><td> 0.0</td></tr>
- <tr><td rowspan="11">STMX</td><td> 1</td><td>12.611</td><td>245.9</td><td> 0.0</td></tr>
- <tr>                          <td> 2</td><td> 7.862</td><td>394.4</td><td> 8.9</td></tr>
- <tr>                          <td> 3</td><td> 6.212</td><td>499.2</td><td>18.2</td></tr>
- <tr>                          <td> 4</td><td> 5.556</td><td>558.1</td><td>27.9</td></tr>
- <tr>                          <td> 5</td><td> 5.503</td><td>563.5</td><td>28.2</td></tr>
- <tr>                          <td> 6</td><td> 5.567</td><td>557.0</td><td>32.9</td></tr>
- <tr>                          <td> 8</td><td> 5.927</td><td>523.2</td><td>33.9</td></tr>
+ <tr><td rowspan="11">STMX</td><td> 1</td><td>12.591</td><td>246.3</td><td> 0.0</td></tr>
+ <tr>                          <td> 2</td><td> 7.512</td><td>412.8</td><td> 8.4</td></tr>
+ <tr>                          <td> 3</td><td> 6.065</td><td>511.3</td><td>17.6</td></tr>
+ <tr>                          <td> 4</td><td> 5.275</td><td>587.9</td><td>30.3</td></tr>
+ <tr>                          <td> 5</td><td> 5.321</td><td>582.8</td><td>27.6</td></tr>
+ <tr>                          <td> 6</td><td> 5.235</td><td>592.4</td><td>32.1</td></tr>
+ <tr>                          <td> 8</td><td> 5.804</td><td>534.3</td><td>40.7</td></tr>
  <tr>                          <td>10</td><td> 6.112</td><td>507.4</td><td>34.8</td></tr>
  <tr>                          <td>20</td><td> 6.771</td><td>458.0</td><td>55.5</td></tr>
  <tr>                          <td>30</td><td> 7.418</td><td>418.0</td><td>65.5</td></tr>
@@ -69,7 +69,7 @@ Software: Debian GNU/Linux 7.0 (x86_64), SBCL 1.1.6 (x86_64), STMX 1.3.2
  <tr><td rowspan="12">mainboard</td>
 
      <td>single threaded</td>  <td> 1</td><td>12.150</td><td>124.0</td><td> 0.0</td></tr>
- <tr><td rowspan="11">STMX</td><td> 1</td><td>18.727</td><td> 80.4</td><td> 0.0</td></tr>
+ <tr><td rowspan="11">STMX</td><td> 1</td><td>18.701</td><td> 80.5</td><td> 0.0</td></tr>
  <tr>                          <td> 2</td><td>10.328</td><td>145.8</td><td> 4.6</td></tr>
  <tr>                          <td> 3</td><td> 7.413</td><td>203.2</td><td>10.8</td></tr>
  <tr>                          <td> 4</td><td> 6.120</td><td>246.1</td><td>19.6</td></tr>
