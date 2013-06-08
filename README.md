@@ -17,7 +17,7 @@ from Microsoft research.
 Lee-STMX is a porting of [Lee-TM](http://apt.cs.man.ac.uk/projects/TM/LeeBenchmark/)
 to STMX. It is a non-trivial benchmark suite for transactional memory
 developed in 2007 by the University of Manchester (UK), then ported to
-STMX by the STMX author.
+STMX by the STMX author. It aims at implementing a realistic workload, with longer transactions than what found in common "artificial" micro-benchmarks.
 
 Status
 ------
@@ -39,12 +39,11 @@ Hardware: Intel Core-i5 750 @4.0 GHz (quad-core), 16GB RAM
 
 Software: Debian GNU/Linux 7.0 (x86_64), SBCL 1.1.7 (x86_64), STMX 1.3.2
 
-Results for MEMBOARD circuit:
+Results for MEMBOARD benchmark:
 ![nil](./results/memboard.png)
 
-Results for MAINBOARD circuit:
+Results for MAINBOARD benchmark:
 ![nil](./results/mainboard.png)
-
 
 
 Analysis and comments
@@ -52,9 +51,9 @@ Analysis and comments
 
 - First, it is evident that in Lee-STMX benchmark, using STMX transactions is always faster than single-threaded code as soon as STMX runs at least two threads. Since STMX targets multi-threaded code, this is good news.
 
-With 4 threads on a quad-core machine, STMX delivers a 70-90% performance improvement with respect to single-threaded code on this benchmark (the peak performance ratio is 246.1 / 127.2 = 1.93 = 193%). Good, but still very far from the theorical maximum of 300% improvement (i.e. quadruple speed).
+With 4 threads on a quad-core machine, STMX delivers a 70-90% performance improvement with respect to single-threaded code on this benchmark (the peak performance ratio is 246.1 / 127.2 = 1.93 = 193%). Good, but still very far from the theorical maximum of 300% improvement, i.e. quadruple speed.
 
-- Second, on this benchmark STMX transactions are typically 25-35% slower than highly optimized locking code: by assuming 100% as locking code performance, STMX reaches 65-75% for **any** number of threads.
+- Second, on this benchmark STMX transactions are typically 25-35% slower than highly optimized locking code: by assuming 100% as locking code performance, STMX reaches 65-75% of it for any number of threads.
 This is hardly new, as **many** research papers discuss and analyze the overhead imposed by software transactional memory, looking for optimizations to reduce such overhead.
 
 In this case, the optimized locking code running 4 threads on a quad-code machine delivers a 125-165% performance improvement with respect to single-threaded code (the peak performance ratio is 797.8 / 354.6 = 2.65 = 265%). Significantly better than transactions, but still far from quadruple speed.
