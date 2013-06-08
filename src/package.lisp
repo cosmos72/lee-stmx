@@ -38,12 +38,17 @@
 (in-package :cl-user)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  ;; choose ONE of the three available implementations
 
-     (pushnew :lee-stmx   *features*) ;; STMX transactions
-  ;; (pushnew :lee-gwlock *features*) ;; global write lock + undo buffer
-  ;; (pushnew :lee-single *features*) ;; single-threaded, no locks
-  )
+  ;; uncomment ONE of the three available implementations
+  (let ((implementation ;; :lee-stmx   ;; STMX transactions
+                           :lee-gwlock ;; global write lock + undo buffer
+                        ;; :lee-single ;; single-threaded, no locks
+          ))
+
+    (setf *features* (remove-if (lambda (e) (member e '(:lee-stmx :lee-gwlock :lee-single)))
+                                *features*))
+
+    (pushnew implementation *features*)))
            
 
 (defpackage #+lee-stmx   #:lee-stmx

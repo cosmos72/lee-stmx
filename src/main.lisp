@@ -304,15 +304,31 @@
     (nreverse all-results)))
 
 
-(defun loop-main-html (&key (input-file "") (output-file "")
-                       (threads *default-thread-counts*)
-                       (runs *default-runs*) (validate nil))
-  (declare (type fixnum runs))
+(defun loop-main-txt (&key (input-file "") (output-file "") (stats-file "")
+                      (threads *default-thread-counts*)
+                      (runs *default-runs*) (validate nil))
+  (declare (type string input-file output-file stats-file)
+           (type list threads)
+           (type fixnum runs)
+           (type boolean validate))
 
-  (dolist (r (loop-main :input-file input-file :output-file output-file
-                             :threads threads :runs runs :validate validate))
-    (let ((d    (lee-result-duration r))
-          (comm (lee-result-commits  r))
-          (fail (lee-result-fails    r))
-          (retr (lee-result-retries  r)))
-      (format t " <tr>                          <td>~2d</td><td>~3$</td><td>~1$</td><td>~1$</td></tr>~%" (lee-result-threads r) d (/ (+ comm fail) d) (/ retr d)))))
+  (let1 stream
+      (if (zerop (length stats-file))
+          *standard-output*
+          (open stats-file :direction :output :if-exists :supersede))
+
+    (declare (type stream stream))
+
+    (unwind-protect
+         (dolist (r (loop-main :input-file input-file :output-file output-file
+                       :threads threads :runs runs :validate validate))
+           (let ((d    (lee-result-duration r))
+                 (comm (lee-result-commits  r))
+                 (fail (lee-result-fails    r))
+                 (retr (lee-result-retries  r)))
+      
+             (format stream "~2d  ~3$  ~1$  ~1$~%" (lee-result-threads r) d
+                     (/ (the fixnum (+ comm fail)) d) (/ retr d))))
+
+      (unless (zerop (length stats-file))
+        (close stream)))))

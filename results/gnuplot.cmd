@@ -1,9 +1,10 @@
+set term wxt size 800, 600
 set grid
 set xtics 5
 set xlabel "threads"
 set ylabel "transactions per second"
 mod(x,n) = x - floor(x/n) * n
-label_offset(x) = 15 * (2 * mod(x+1, 2) - 1)
+label_offset(x) = 10 * (2 * mod(x+1, 2) - 1)
 
 plot [0:51][0:] \
   "gwlock.txt" using 1:3 title "global write lock [SUCCESS]" with linespoints pt 13 lc 1, \
