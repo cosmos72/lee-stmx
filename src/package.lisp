@@ -38,14 +38,22 @@
 (in-package :cl-user)
 
 (eval-when (:compile-toplevel :load-toplevel :execute)
-  (pushnew :lee-stmx *features*))
+  ;; choose ONE of the three available implementations
 
-(defpackage #+lee-stmx #:lee-stmx
-            #-lee-stmx #:lee-cg
+     (pushnew :lee-stmx   *features*) ;; STMX transactions
+  ;; (pushnew :lee-gwlock *features*) ;; global write lock + undo buffer
+  ;; (pushnew :lee-single *features*) ;; single-threaded, no locks
+  )
+           
+
+(defpackage #+lee-stmx   #:lee-stmx
+            #+lee-gwlock #:lee-gwlock
+            #+lee-single #:lee-single
+            
   (:use #:cl
         #:bordeaux-threads
         #:stmx.lang
         #:stmx
         #:stmx.util)
 
-  (:export #:main))
+  (:export #:main #:loop-main #:loop-main-html))

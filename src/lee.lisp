@@ -35,8 +35,9 @@
 
 ;;;; * lee-stmx
 
-#+lee-stmx (in-package :lee-stmx)
-#-lee-stmx (in-package :lee-cg)
+#+lee-stmx   (in-package :lee-stmx)
+#+lee-gwlock (in-package :lee-gwlock)
+#+lee-single (in-package :lee-single)
 
 
 (declaim (type fixnum +empty+ +occ-shift+ +occ-mask+ +occ+ +via+ +bvia+ +track+ +temp-empty+))
@@ -94,7 +95,7 @@
   nil)
 
 
-(defun free-frontier-fifo (head tail)
+(defun free-frontier-list (head tail)
   "Add a list of FRONTIERs to the free frontier pool.
 TAIL must be the last CONS cell of the list starting at HEAD."
   (declare (type cons head tail))
@@ -173,7 +174,7 @@ Return NIL if FIFO is empty."
     (unless (eq head tail)
       (rotatef (first head) (first tail))
       (let1 next (rest head)
-        (free-frontier-fifo next tail))
+        (free-frontier-list next tail))
       (setf (rest head) nil
             (frontier-fifo-tail fifo) head))
     fifo))
@@ -188,9 +189,9 @@ Return NIL if FIFO is empty."
 (declaim (inline %make-grid))
 
 (defstruct (grid (:constructor %make-grid))
-  (width  0 :type fixnum)
-  (height 0 :type fixnum)
-  (depth  0 :type fixnum)
+  (width  0 :type (integer 0 #.most-positive-fixnum))
+  (height 0 :type (integer 0 #.most-positive-fixnum))
+  (depth  0 :type (integer 0 #.most-positive-fixnum))
   #+lee-stmx
   (cells  (simple-tvector 0) :type simple-tvector)
   #-lee-stmx
@@ -220,37 +221,58 @@ Return NIL if FIFO is empty."
   
 
 (declaim (ftype (function (grid fixnum fixnum fixnum) fixnum) point point-tx point-notx)
+
+         (inline point point-tx point-notx)
+
          (ftype (function (fixnum grid fixnum fixnum fixnum) fixnum)
-                (setf point-tx) (setf point-notx))
-         (inline point point-tx point-notx))
+                (setf point) (setf point-notx) #-lee-gwlock (setf point-tx))
+
+         ;; lee-gwlock implementation of (setf point-tx) needs two more arguments:
+         ;; the undo-buffer and the current value of (point-tx x y z)
+         #+lee-gwlock
+         (ftype (function (fixnum grid fixnum fixnum fixnum frontier-fifo fixnum) fixnum)
+                (setf point-tx)))
+
+
 
 (defun point (grid x y z)
+  "Get grid point (x y z)"
   (let ((index (point-index grid x y z))
         (cells (grid-cells grid)))
     #+lee-stmx (tsvref cells index)
     #-lee-stmx ( svref cells index)))
 
 (defun point-tx (grid x y z)
+  "Get grid point (x y z)"
   (let ((index (point-index grid x y z))
         (cells (grid-cells grid)))
     #+lee-stmx (tsvref-tx cells index)
     #-lee-stmx ( svref    cells index)))
 
-
-(defun (setf point-tx) (value grid x y z)
-  (let ((index (point-index grid x y z))
-        (cells (grid-cells grid)))
-    (setf
-     #+lee-stmx (tsvref-tx cells index)
-     #-lee-stmx ( svref    cells index)
-     value)))
-
-
 (defun point-notx (grid x y z)
+  "Get grid point (x y z)"
+
   (let ((index (point-index grid x y z))
         (cells (grid-cells grid)))
     #+lee-stmx (tsvref-notx cells index)
     #-lee-stmx ( svref      cells index)))
+
+
+;; lee-gwlock implementation of (setf point-tx) needs two more arguments:
+;; the undo-buffer and the current value of (point-tx x y z)
+
+(defun (setf point-tx) (value grid x y z #+lee-gwlock undo-buffer #+lee-gwlock point-tx)
+  "Set grid point (x y z) to value."
+
+  (let ((index (point-index grid x y z))
+        (cells (grid-cells grid)))
+    #+lee-gwlock
+    (push-new-frontier undo-buffer x y z point-tx)
+
+    (setf
+     #+lee-stmx (tsvref-tx cells index)
+     #-lee-stmx ( svref    cells index)
+     value)))
 
 
 (defun (setf point-notx) (value grid x y z)
@@ -261,6 +283,9 @@ Return NIL if FIFO is empty."
      #-lee-stmx ( svref      cells index)
      value)))
 
+
+
+;;;; ** temp-grid
 
 (deftype temp-grid () 'simple-vector)    
 
@@ -385,6 +410,9 @@ i.e. (truncate (sqrt (+ (square (- x1 x2)) (square (- y1 y2)))))."
 
 
 
+
+
+
 ;;;; ** lee
 
 (declaim (inline %make-lee))
@@ -396,7 +424,10 @@ i.e. (truncate (sqrt (+ (square (- x1 x2)) (square (- y1 y2)))))."
   (work              nil    :type list)
   ;; number of connections
   (netno             0      :type fixnum)
-  (failures          0      :type fixnum))
+  (failures          0      :type fixnum)
+
+  #-lee-stmx
+  (global-lock   (make-lock (symbol-name 'lee-global-lock)) :read-only t))
   
 
 
@@ -680,10 +711,32 @@ the number of iterations allowed."
             (<= (temp-point grid temp-grid x (1+ y) zo) point-o))))))
 
 
+#+lee-gwlock
+(defun undo-backtrack-from (grid undo-buffer)
+  "undo the effects of a failed BACKTRACK-FROM. Needed by lee-gwlock implementation."
+  (declare (type grid grid)
+           (type frontier-fifo undo-buffer))
+  (let ((head (frontier-fifo-head undo-buffer))
+        (tail (frontier-fifo-tail undo-buffer)))
+    (loop for cell = head then (rest cell)
+       until (eq cell tail) do
+         (let* ((f  (first cell))
+                (x  (frontier-x  f))
+                (y  (frontier-y  f))
+                (z  (frontier-z  f))
+                (dw (frontier-dw f)))
+           (setf (point-notx grid x y z) dw)))
+
+    ;; return frontiers and CONS cells to pool
+    (clear-frontier-fifo undo-buffer)))
+
+
+
 
 (defun backtrack-from (lee temp-grid x y xgoal ygoal netno)
   "backtrack from the goal position (XGOAL YGOAL) back to the starting position
 \(X Y) filling GRID with the specified track number NETNO.
+Return T if successfil, NIL if failed.
 
 *** algorithm ***
 CurrentPos = Goal
@@ -699,128 +752,139 @@ Until back at starting point
            (type temp-grid temp-grid))
   (log:debug "track ~d backtrack length ~d" netno (distance x y xgoal ygoal))
 
-  (let ((grid (lee-grid lee))
-        (zgoal (if (> (abs (- xgoal x)) (abs (- ygoal y)))
-                   0
-                   1)))
+  (prog ((grid (lee-grid lee))
+         (zgoal (if (> (abs (- xgoal x)) (abs (- ygoal y)))
+                    0
+                    1))
+         #+lee-gwlock
+         (undo-buffer (frontier-fifo)))
 
-    (when (= +temp-empty+ (temp-point grid temp-grid xgoal ygoal zgoal))
-      (log:debug "preferred layer ~d not reached" zgoal)
-      (setf zgoal (the fixnum (- 1 zgoal))))
+     (when (= +temp-empty+ (temp-point grid temp-grid xgoal ygoal zgoal))
+       (log:debug "preferred layer ~d not reached" zgoal)
+       (setf zgoal (the fixnum (- 1 zgoal))))
 
-    (let ((xt xgoal) (yt ygoal) (zt zgoal)
-          (xfail -1) (yfail -1) (zfail -1) ;; (x y z) of last "advanced = NIL"
-          (num-vias 0)
-          (forced-vias 0)
-          (dist-so-far 0)
-          (track (+ +track+ netno)))
+     (let ((xt xgoal) (yt ygoal) (zt zgoal)
+           (xfail -1) (yfail -1) (zfail -1) ;; (x y z) of last "advanced = NIL"
+           (num-vias 0)
+           (forced-vias 0)
+           (dist-so-far 0)
+           (track (+ +track+ netno)))
 
-      (declare (type fixnum zgoal xt yt zt
-                     num-vias forced-vias dist-so-far track))
+       (declare (type fixnum zgoal xt yt zt xfail yfail zfail
+                      num-vias forced-vias dist-so-far track))
 
-      (loop until (and (= xt x) (= yt y)) ;; until back at (x y)
-         for advanced = nil
-         for min-d = 0
-         for dir = 0
-         for point   = (point-tx grid xt yt zt)
-         for point-t = (temp-point grid temp-grid xt yt zt)
-         for min-weight = (the fixnum +temp-empty+)
-         do
-           (dotimes (d 4) ;; find dir to start back from
-             (let* ((dx (aref *dx* zt d))
-                    (dy (aref *dy* zt d))
-                    (xd (the fixnum (+ xt dx)))
-                    (yd (the fixnum (+ yt dy)))
-                    (point-d (temp-point grid temp-grid xd yd zt)))
+       (loop until (and (= xt x) (= yt y)) ;; until back at (x y)
+          for advanced = nil
+          for min-d = 0
+          for dir = 0
+          for point   = (point-tx grid xt yt zt)
+          for point-t = (temp-point grid temp-grid xt yt zt)
+          for min-weight = (the fixnum +temp-empty+)
+          do
+            (dotimes (d 4) ;; find dir to start back from
+              (let* ((dx (aref *dx* zt d))
+                     (dy (aref *dy* zt d))
+                     (xd (the fixnum (+ xt dx)))
+                     (yd (the fixnum (+ yt dy)))
+                     (point-d (temp-point grid temp-grid xd yd zt)))
                    
-               (when (and (< point-d min-weight)
-                          (< point-d point-t))
-                 (setf min-weight point-d
-                       min-d d
-                       dir (the fixnum (+ (ash dx 1) dy)) ;; hashed dir
-                       advanced t))))
+                (when (and (< point-d min-weight)
+                           (< point-d point-t))
+                  (setf min-weight point-d
+                        min-d d
+                        dir (the fixnum (+ (ash dx 1) dy)) ;; hashed dir
+                        advanced t))))
+            
+            (log:trace "track ~d backtracking from (~d ~d ~d), weight ~d, advanced ~a,~a min-d ~d"
+                       netno xt yt zt point-t advanced (if advanced "  " "") min-d)
            
-           (log:trace "track ~d backtracking from (~d ~d ~d), weight ~d, advanced ~a,~a min-d ~d"
-                      netno xt yt zt point-t advanced (if advanced "  " "") min-d)
-           
-           (if advanced
-             (incf dist-so-far)
-             (if (and (= xfail xt) (= yfail yt) (= zfail zt))
-               (progn
-                 (log:debug "track ~d failed, stuck here" netno)
-                 (return-from backtrack-from nil))
-               (setf xfail xt
-                     yfail yt
-                     zfail zt)))
+            (if advanced
+                (incf dist-so-far)
+                (if (and (= xfail xt) (= yfail yt) (= zfail zt))
+                    (progn
+                      (log:debug "track ~d failed, stuck here" netno)
+                      (go fail))
+                    (setf xfail xt
+                          yfail yt
+                          zfail zt)))
 
-           (if (and (or (and (> min-d 1)
-                             ;; not preferred dir for this layer
-                             (> dist-so-far 15)
-                             (> (distance^2 xt yt x y) 225))
-                        (and (not advanced)
-                             (/= +via+  point)
-                             (/= +bvia+ point)))
-                    (path-from-other-side grid temp-grid xt yt zt))
+            (if (and (or (and (> min-d 1)
+                              ;; not preferred dir for this layer
+                              (> dist-so-far 15)
+                              (> (distance^2 xt yt x y) 225))
+                         (and (not advanced)
+                              (/= +via+  point)
+                              (/= +bvia+ point)))
+                     (path-from-other-side grid temp-grid xt yt zt))
 
-               (let1 via-t (if advanced +via+ +bvia+) ;; BVIA is nowhere else to go
-
-                 (unless (free? point)
-                   (log:debug "track ~d failed, point (~3d ~3d ~d) contains ~d, is not empty (case 1)"
-                              netno xt yt zt point)
-                   (return-from backtrack-from nil))
-                 ;; mark via
-                 (setf (temp-point grid temp-grid xt yt zt) via-t
-                       (point-tx grid xt yt zt) track
-                       zt (the fixnum (- 1 zt))) ;; 0 if 1, 1 if 0
-                 (let1 point (point-tx grid xt yt zt)
-                   (unless (free? point)
-                     (log:debug "track ~d failed, point (~3d ~3d ~d) contains ~d, is not empty (case 2)"
-                                netno xt yt zt point)
-                     (return-from backtrack-from nil)))
-                 ;; and the other side
-                 (setf (temp-point grid temp-grid xt yt zt) via-t
-                       (point-tx grid xt yt zt) track)
-                 (incf num-vias)
-                 (if advanced
-                     (incf forced-vias))
-                 (log:trace "~avia. dist-so-far ~d, dist-left ~d"
-                            (if advanced "" "forced ") dist-so-far (distance xt yt x y))
-                 (setf dist-so-far 0))
-               
-               ;; else
-               (progn
-                 (cond ;; +occ+ is negative
-                   ((free? point)
-                    ;; fill in track unless connection point
-                    (setf (point-tx grid xt yt zt) track))
-                   ((= point +occ+)
-                    (when (log:debug)
-                      (unless (or (and (= xt xgoal) (= yt ygoal))
-                                  (and (= xt x) (= yt y)))
-                        (log:trace "track ~d not backtracking, point (~3d ~3d ~d) contains ~d, is not empty (case 3)"
-                                   netno xt yt zt point))))
-                   ((and (> point +occ+) (/= point track))
-                    (log:debug "track ~d failed, point (~3d ~3d ~d) contains ~d, is not empty (case 4)"
+                (let1 via-t (if advanced +via+ +bvia+) ;; BVIA is nowhere else to go
+                  
+                  (unless (free? point)
+                    (log:debug "track ~d failed, point (~3d ~3d ~d) contains ~d, is not empty (case 1)"
                                netno xt yt zt point)
-                    (return-from backtrack-from nil)))
+                    (go fail))
+
+                  ;; mark via
+                  (setf (temp-point grid temp-grid xt yt zt) via-t
+                        (point-tx grid xt yt zt #+lee-gwlock undo-buffer #+lee-gwlock point) track
+                        zt (the fixnum (- 1 zt))) ;; 0 if 1, 1 if 0
+
+                  (let1 point (point-tx grid xt yt zt)
+                    (unless (free? point)
+                      (log:debug "track ~d failed, point (~3d ~3d ~d) contains ~d, is not empty (case 2)"
+                                 netno xt yt zt point)
+                      (go fail))
+
+                    ;; and the other side
+                    (setf (temp-point grid temp-grid xt yt zt) via-t
+                          (point-tx grid xt yt zt #+lee-gwlock undo-buffer #+lee-gwlock point) track))
+
+                  (incf num-vias)
+                  (if advanced
+                      (incf forced-vias))
+                  (log:trace "~avia. dist-so-far ~d, dist-left ~d"
+                             (if advanced "" "forced ") dist-so-far (distance xt yt x y))
+                  (setf dist-so-far 0))
+               
+                ;; else
+                (progn
+                  (cond
+                    ((free? point)
+                     ;; fill in track unless connection point
+                     (setf (point-tx grid xt yt zt #+lee-gwlock undo-buffer #+lee-gwlock point) track))
+
+                    ((= point +occ+)
+                     (when (log:debug)
+                       (unless (or (and (= xt xgoal) (= yt ygoal))
+                                   (and (= xt x) (= yt y)))
+                         (log:trace "track ~d not backtracking, point (~3d ~3d ~d) contains ~d, is not empty (case 3)"
+                                    netno xt yt zt point))))
+                    ((and (> point +occ+) (/= point track))
+                     (log:debug "track ~d failed, point (~3d ~3d ~d) contains ~d, is not empty (case 4)"
+                                netno xt yt zt point)
+                     (go fail)))
                  
-                 ;; update current position
-                 (incf xt (aref *dx* zt min-d))
-                 (incf yt (aref *dy* zt min-d))))))
+                  ;; update current position
+                  (incf xt (aref *dx* zt min-d))
+                  (incf yt (aref *dy* zt min-d))))
 
-    #|
-    (when (= netno 1725)
-      (loop for yi from y to ygoal do
-           (loop for xi from x to xgoal do
-                (format t "[~d ~d] "
-                        (temp-point grid temp-grid xi yi 0)
-                        (temp-point grid temp-grid xi yi 1)))
-           (format t "~%"))
-      (break))
-    |# )
+            #+never
+            (when (= netno 1725)
+              (loop for yi from y to ygoal do
+                   (loop for xi from x to xgoal do
+                        (format t "[~d ~d] "
+                                (temp-point grid temp-grid xi yi 0)
+                                (temp-point grid temp-grid xi yi 1)))
+                   (format t "~%"))
+              (break))
+            ))
 
-  (log:debug "track ~d completed" netno)
-  t)
+     (log:debug "track ~d completed" netno)
+     (return t)
+
+     fail
+     #+lee-gwlock (undo-backtrack-from grid undo-buffer)
+     (return nil)))
 
 
                
@@ -880,11 +944,12 @@ in case of transaction conflicts, or zero if work fails during expansion)."
          (log:debug "track ~d found route (~d ~d) to (~d ~d)" netno x y xgoal ygoal)
 
          (#+lee-stmx atomic
-          #-lee-stmx progn
-                              
+          #+lee-gwlock   with-lock #+lee-gwlock ((lee-global-lock lee))
+          #+lee-single  progn
+
           (incf (the fixnum transactions))
           (unless (backtrack-from lee temp-grid x y xgoal ygoal netno)
-            ;; non-local exit causes rollback
+            ;; non-local exit from STMX atomic block causes rollback
             (go start)))
          (setf success t))
 

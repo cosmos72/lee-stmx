@@ -37,7 +37,7 @@
 
 (asdf:defsystem #:lee-stmx
   :name "lee-stmx"
-  :version "0.7.0"
+  :version "0.7.1"
   :license "BSD"
   :author "Massimiliano Ghilardi, The University of Manchester (UK)"
   :description "Lee-TM benchmark for STMX transactional memory library"

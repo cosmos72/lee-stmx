@@ -34,8 +34,9 @@
 
 ;;;; * lee-stmx
 
-#+lee-stmx (in-package :lee-stmx)
-#-lee-stmx (in-package :lee-cg)
+#+lee-stmx   (in-package :lee-stmx)
+#+lee-gwlock (in-package :lee-gwlock)
+#+lee-single (in-package :lee-single)
 
 
 (declaim (inline %make-thread-barrier))

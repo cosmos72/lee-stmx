@@ -34,14 +34,15 @@
 
 ;;;; * lee-stmx
 
-#+lee-stmx (in-package :lee-stmx)
-#-lee-stmx (in-package :lee-cg)
+#+lee-stmx   (in-package :lee-stmx)
+#+lee-gwlock (in-package :lee-gwlock)
+#+lee-single (in-package :lee-single)
 
 
 (defstruct (lee-args (:constructor lee-args))
   (input-file  ""  :type string)
   (output-file ""  :type string)
-  (threads     1   :type fixnum)
+  (threads     1   :type (integer 1 #.most-positive-fixnum))
   (validate    nil :type boolean))
 
 
@@ -71,7 +72,7 @@
 
     (declare (type fixnum commits retries fails))
 
-    (loop for q = (#+lee-stmx atomic-pop #-lee-stmx pop (lee-work lee))
+    (loop for q = (atomic-pop (lee-work lee))
        while q do
          (multiple-value-bind (success transactions)
              (lee-connect lee q temp-grid)
@@ -123,7 +124,12 @@
 (defun run-benchmark (lee-args)
   (declare (type lee-args lee-args))
 
-  (let* ((n (lee-args-threads lee-args))
+  #+lee-single
+  (when (/= 1 (lee-args-threads lee-args))
+    (log:warn "this lee-stmx benchmark is compiled in single-thread mode. ignoring ~a ~a argument"
+              :threads (lee-args-threads lee-args)))
+
+  (let* ((n #-lee-single (lee-args-threads lee-args) #+lee-single 1)
          (input-file (lee-args-input-file lee-args))
          (input-file? (not (zerop (length input-file))))
          (lee (if input-file? (lee) (lee :grid-size 10))) ;; default grid size is 600
@@ -255,7 +261,7 @@
 
   (let1 args (parse-arguments args-list)
     ;; (log:info "Lee-STMX benchmark arguments:")
-    (log:info "~s" args)
+    ;; (log:info "~s" args)
     (let1 result (run-benchmark args)
       (log:info "~s" result)
       result)))
@@ -270,10 +276,18 @@
                        :threads threads :validate validate)))
 
 
+(declaim (type fixnum *default-runs*)
+         (type list *default-thread-counts*))
+         
+(defvar *default-runs* 10)
+
+(defvar *default-thread-counts* #-lee-single '(1 2 3 4 5 6 8 10 20 30 50)
+                                #+lee-single '(1))
+
 
 (defun loop-main (&key (input-file "") (output-file "")
-                  (threads '(1 2 3 4 5 6 8 10 20 30 50))
-                  (runs 5) (validate nil))
+                  (threads *default-thread-counts*)
+                  (runs *default-runs*) (validate nil))
   (declare (type fixnum runs))
   (let1 all-results nil
     (dolist (th threads)
@@ -291,8 +305,8 @@
 
 
 (defun loop-main-html (&key (input-file "") (output-file "")
-                       (threads '(1 2 3 4 5 6 8 10 20 30 50))
-                       (runs 5) (validate nil))
+                       (threads *default-thread-counts*)
+                       (runs *default-runs*) (validate nil))
   (declare (type fixnum runs))
 
   (dolist (r (loop-main :input-file input-file :output-file output-file
