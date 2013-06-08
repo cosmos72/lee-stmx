@@ -40,7 +40,7 @@ Hardware: Intel Core-i5 750 @4.0 GHz (quad-core), 16GB RAM
 Software: Debian GNU/Linux 7.0 (x86_64), SBCL 1.1.6 (x86_64), STMX 1.3.2
 
 
-<table>
+<table style="font-size:75%;">
 
  <tr><th rowspan="2"><b>benchmark</b></th>
      <th rowspan="2"><b>implementation</b></th>
