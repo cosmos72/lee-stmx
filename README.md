@@ -78,7 +78,7 @@ Software: Debian GNU/Linux 7.0 (x86_64), SBCL 1.1.6 (x86_64), STMX 1.3.2
  <tr>                          <td>30</td><td> 5.243</td><td>591.5</td><td>87.0</td></tr>
  <tr>                          <td>50</td><td> 5.599</td><td>553.8</td><td>107.5</td></tr>
 
- <tr><td rowspan="12">mainboard</td>
+ <tr><td rowspan="23">mainboard</td>
 
      <td>single threaded</td>  <td> 1</td><td>11.842</td><td>127.2</td><td> 0.0</td></tr>
  <tr><td rowspan="11">STMX</td><td> 1</td><td>18.579</td><td> 81.1</td><td> 0.0</td></tr>
