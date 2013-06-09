@@ -68,5 +68,5 @@
                (setf (thread-barrier-conditions thread-barrier) nil))
              (let1 cond (bt:make-condition-variable :name "thread-barrier condition")
                (push cond (thread-barrier-conditions thread-barrier))
-               (sb-thread:condition-wait cond lock)))
+               (bt:condition-wait cond lock)))
       (bt:release-lock lock))))

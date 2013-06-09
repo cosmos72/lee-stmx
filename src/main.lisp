@@ -72,7 +72,7 @@
 
     (declare (type fixnum commits retries fails))
 
-    (loop for q = (atomic-pop (lee-work lee))
+    (loop for q = (dequeue-work lee)
        while q do
          (multiple-value-bind (success transactions)
              (lee-connect lee q temp-grid)

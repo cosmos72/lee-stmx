@@ -425,7 +425,8 @@ i.e. (truncate (sqrt (+ (square (- x1 x2)) (square (- y1 y2)))))."
   ;; number of connections
   (netno             0      :type fixnum)
   (failures          0      :type fixnum)
-
+  #-stmx.have-atomic-ops
+  (work-lock     (make-lock (symbol-name 'lee-work-lock)) :read-only t)
   #-lee-stmx
   (global-lock   (make-lock (symbol-name 'lee-global-lock)) :read-only t))
   
@@ -464,6 +465,18 @@ i.e. (truncate (sqrt (+ (square (- x1 x2)) (square (- y1 y2)))))."
   (occupy-grid grid x2 y2)
   (enqueue-work lee x1 y1 x2 y2))
 
+
+(defun dequeue-work (lee)
+  "Atomically pop the first item from (lee-work lee) and return it."
+  (declare (type lee lee))
+
+  (the (or null work)
+    #+stmx.have-atomic-ops
+    (atomic-pop (lee-work lee))
+    #-stmx.have-atomic-ops
+    (with-lock ((lee-work-lock lee))
+      (pop (lee-work lee)))))
+  
 
 (defun sort-work (work)
   (declare (type list work))
