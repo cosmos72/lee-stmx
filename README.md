@@ -17,7 +17,7 @@ from Microsoft research.
 Lee-STMX is a porting of [Lee-TM](http://apt.cs.man.ac.uk/projects/TM/LeeBenchmark/)
 to STMX. It is a non-trivial benchmark suite for transactional memory
 developed in 2007 by the University of Manchester (UK), then ported to
-STMX by the STMX author. It aims at implementing a realistic workload, with longer transactions than what found in common "artificial" micro-benchmarks.
+STMX by the STMX author. It aims at implementing a realistic workload and uses longer transactions than what found in common "artificial" micro-benchmarks.
 
 Status
 ------
