@@ -296,7 +296,7 @@
           (trivial-garbage:gc :full t)
           (let1 result (main :input-file input-file :output-file output-file
                              :threads th :validate validate)
-            (when (<= (lee-result-fails result) 2)
+            (when (<= (lee-result-fails result) 30)
               (push result results))))
         (when results
           (push (first (sort results #'< :key #'lee-result-duration))
@@ -327,8 +327,8 @@
                  (fail (lee-result-fails    r))
                  (retr (lee-result-retries  r)))
       
-             (format stream "~2d  ~3$  ~1$  ~1$~%" (lee-result-threads r) d
-                     (/ (the fixnum (+ comm fail)) d) (/ retr d))))
-
+             (format stream "~2d  ~3$  ~1$  ~1$  ~1$~%" (lee-result-threads r) d
+                     (/ (the fixnum (+ comm fail)) d) (/ retr d) (/ fail d))))
+      
       (unless (zerop (length stats-file))
         (close stream)))))

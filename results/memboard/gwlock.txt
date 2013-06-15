@@ -1,12 +1,71 @@
-# threads seconds successes-per-second retries-per-second
- 1   8.787  352.9   0.0
- 2   5.083  610.1  11.6
- 3   4.414  702.5  24.7
- 4   3.887  797.8  39.1
- 5   3.990  777.2  38.6
- 6   3.947  785.7  40.5
- 8   4.235  732.2  52.2
-10   4.268  726.6  52.0
-20   4.913  631.2  75.1
-30   5.243  591.5  87.0
-50   5.599  553.8  107.5
+# threads seconds successes-per-second retries-per-second fails-per-second
+
+### Hadlock algorithm, FRONTIER-FIFO implementation
+# full optimization flags (speed 3)...
+ 1  5.042   615.0   0.0  4.0
+ 2  2.950  1051.2   5.1  6.8
+ 3  2.466  1257.5  14.6  2.0
+ 4  2.237  1386.2  25.5  3.1
+ 5  2.236  1386.9  28.2  4.0
+ 6  2.286  1356.5  25.4  4.8
+ 8  2.336  1327.5  26.5  4.3
+10  2.359  1314.5  33.5  4.2
+20  2.429  1276.7  48.2  2.1
+30  2.387  1299.1  57.8  2.5
+50  2.497  1241.9  64.5  3.2
+
+
+
+### Hadlock algorithm, FRONTIER-FIFO implementation
+# default optimization flags
+# 1  7.809  397.1  0.0  2.6
+# 2  4.387  706.9  3.4  4.6
+# 3  3.189  972.4 11.3  6.6
+# 4  2.597 1194.1 24.6  2.7
+# ...
+
+
+### Hadlock algorithm, FRONTIER-STACK implementation
+# default optimization flags
+# 1 19.339 160.35  0.0  6.25
+# 2 11.379 272.52  2.7  9.05
+# ...
+
+
+
+
+
+### Lee algorithm, FRONTIER-STACK implementation
+# default optimization flags
+# 1 14.403  215.3   0.0
+# 2  7.942  390.5   7.3
+# 3  6.358  487.7  17.3
+# 4  5.312  583.8  29.2
+# ...
+
+
+### Lee algorithm, FRONTIER-FIFO implementation
+# full optimization flags (speed 3)...
+# 1   8.787  352.9   0.0
+# 2   5.083  610.1  11.6
+# 3   4.414  702.5  24.7
+# 4   3.887  797.8  39.1
+# 5   3.990  777.2  38.6
+# 6   3.947  785.7  40.5
+# 8   4.235  732.2  52.2
+#10   4.268  726.6  52.0
+#20   4.913  631.2  75.1
+#30   5.243  591.5  87.0
+#50   5.599  553.8  107.5
+
+
+### Lee algorithm, FRONTIER-FIFO implementation
+# default optimization flags
+# 1 14.917  207.9   0.0
+# 2  8.548  362.8   7.4
+# 3  6.466  479.6  16.5
+# 4  5.599  553.8  25.9
+# 5  5.812  533.6  24.4
+# ...
+
+

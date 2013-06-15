@@ -40,7 +40,10 @@
 #+lee-single (in-package :lee-single)
 
 
-(declaim (type fixnum +empty+ +occ-shift+ +occ-mask+ +occ+ +via+ +bvia+ +track+ +temp-empty+))
+(declaim (type fixnum
+               +empty+ +occ-shift+ +occ-mask+ +occ+ +via+ +bvia+ +track+
+               +default-grid-size+ +hadlock-mask+ +hadlock-penalty+ +temp-empty+))
+
 (defconstant +empty+  0)
 (defconstant +occ-shift+ (1- (integer-length most-positive-fixnum)))
 (defconstant +occ-mask+  (ash 1 +occ-shift+))
@@ -48,7 +51,21 @@
 (defconstant +via+   (1+ +occ+))
 (defconstant +bvia+  (1+ +via+))
 (defconstant +track+ (1+ +bvia+))
+
+(defconstant +default-grid-size+ 600)
+(defconstant +hadlock-shift+     (ash +occ-shift+ -1))
+(defconstant +hadlock-mask+      (ash 1 +hadlock-shift+))
+(defconstant +hadlock-penalty+   +hadlock-mask+)
 (defconstant +temp-empty+ (1- +occ+))
+
+;;;; ** fixnum arithmetic
+
+
+(declaim (ftype (function (fixnum fixnum) fixnum) fixnum+)
+         (inline fixnum+))
+(defun fixnum+ (a b)
+  (declare (type fixnum a b))
+  (the fixnum (+ a b)))
 
 ;;;; ** frontier
 
@@ -144,11 +161,12 @@ TAIL must be the last CONS cell of the list starting at HEAD."
               (frontier-y  f) y
               (frontier-z  f) z
               (frontier-dw f) dw)
+
         (setf f (frontier x y z dw)))
 
     (let1 tail (frontier-fifo-tail fifo)
       (setf (first tail) f
-            (rest  tail) cell
+            (rest tail)  cell
             (frontier-fifo-tail fifo) cell))
     (the frontier f)))
 
@@ -432,7 +450,7 @@ i.e. (truncate (sqrt (+ (square (- x1 x2)) (square (- y1 y2)))))."
   
 
 
-(defun lee (&key (grid-size 600))
+(defun lee (&key (grid-size +default-grid-size+))
   "Create and return a new LEE benchmark struct."
   (%make-lee :grid-size grid-size :max-track-length (* grid-size 5)
              :grid (grid grid-size grid-size 2)))
@@ -582,6 +600,25 @@ i.e. (truncate (sqrt (+ (square (- x1 x2)) (square (- y1 y2)))))."
                     
 
 
+(defun hadlock-penalty (x y dx dy xgoal ygoal)
+  "Return penalty for moving away from goal.
+Inspired by Hadlock routing algorithm."
+  (declare (type fixnum x y xgoal ygoal)
+           (type (integer -1 1) dx dy))
+
+  (the fixnum
+    (if (or
+         (and (< x xgoal) (= dx -1))
+         (and (= x xgoal) (/= dx 0))
+         (and (> x xgoal) (= dx  1))
+
+         (and (< y ygoal) (= dy -1))
+         (and (= y ygoal) (/= dy 0))
+         (and (> y ygoal) (= dy  1)))
+        
+        +hadlock-penalty+
+        0)))
+
   
 (defun expand-to (lee temp-grid x y xgoal ygoal
                   &optional (max-track-length (lee-max-track-length lee)))
@@ -632,7 +669,7 @@ the number of iterations allowed."
                     (log:trace "processing (~3d ~3d ~d), weight ~d"
                                fx fy fz curr-val)
 
-                    (when (> curr-val max-track-length)
+                    (when (> (logand (1- +hadlock-mask+) curr-val) max-track-length)
                       (log:debug "weight ~d exceeds max track length ~d, quitting loop"
                                  curr-val max-track-length)
                       (return-from outer))
@@ -648,13 +685,16 @@ the number of iterations allowed."
                                 (reached? (and (= fdx xgoal) (= fdy ygoal))))
 
                            (when (or empty? reached?)
-                             (let ((val (the fixnum (+ curr-val 1 weight)))
-                                   (next-val (temp-point grid temp-grid fdx fdy fz)))
+                             (let* ((raw-val (the fixnum (+ curr-val 1 weight)))
+                                    (penalty (the fixnum (hadlock-penalty fx fy dx dy xgoal ygoal)))
+                                    (val     (the fixnum (+ raw-val penalty)))
+                                    (next-val (temp-point grid temp-grid fdx fdy fz)))
 
                                (when (or reached? (> next-val val))
                                  (setf (temp-point grid temp-grid fdx fdy fz) val)
                                  (unless reached?
-                                   (push-new-frontier alt-front fdx fdy fz 0)))))))
+                                   (push-new-frontier (if (zerop penalty) front alt-front)
+                                                      fdx fdy fz 0)))))))
 
 
                     (let* ((fdz      (the fixnum (- 1 fz)))
@@ -669,7 +709,7 @@ the number of iterations allowed."
 
                           (when (> next-val val)
                             (setf (temp-point grid temp-grid fx fy fdz) val)
-                            (push-new-frontier alt-front fx fy fdz 0)))))
+                            (push-new-frontier front fx fy fdz 0)))))
 
                     ;; must check if found goal, if so return true
                     (unless reached0
@@ -867,7 +907,7 @@ Until back at starting point
                      (setf (point-tx grid xt yt zt #+lee-gwlock undo-buffer #+lee-gwlock point) track))
 
                     ((= point +occ+)
-                     (when (log:debug)
+                     (when (log:trace)
                        (unless (or (and (= xt xgoal) (= yt ygoal))
                                    (and (= xt x) (= yt y)))
                          (log:trace "track ~d not backtracking, point (~3d ~3d ~d) contains ~d, is not empty (case 3)"
