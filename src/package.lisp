@@ -40,8 +40,8 @@
 (eval-when (:compile-toplevel :load-toplevel :execute)
 
   ;; uncomment ONE of the three available implementations
-  (let ((implementation ;; :lee-stmx   ;; STMX transactions
-                           :lee-gwlock ;; global write lock + undo buffer
+  (let ((implementation    :lee-stmx   ;; STMX transactions
+                        ;; :lee-gwlock ;; global write lock + undo buffer
                         ;; :lee-single ;; single-threaded, no locks
           ))
 
